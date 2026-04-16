@@ -376,7 +376,7 @@
 
   <!-- g/kg mode -->
   <div id="macroMode_gkg">
-    <div class="form-grid" style="grid-template-columns: repeat(3, 1fr);">
+    <div class="form-grid form-grid-3">
       <div class="form-group">
         <div class="flex items-center justify-between">
           <label>Proteína</label>
@@ -412,7 +412,7 @@
 
   <!-- g/kg FFM mode -->
   <div id="macroMode_gkg_ffm" class="hidden">
-    <div class="form-grid" style="grid-template-columns: repeat(3, 1fr);">
+    <div class="form-grid form-grid-3">
       <div class="form-group">
         <label>Proteína (FFM)</label>
         <div class="input-with-unit">
@@ -440,7 +440,7 @@
 
   <!-- % mode -->
   <div id="macroMode_pct" class="hidden">
-    <div class="form-grid" style="grid-template-columns: repeat(3, 1fr);">
+    <div class="form-grid form-grid-3">
       <div class="form-group">
         <label>Proteína</label>
         <div class="input-with-unit">
@@ -468,7 +468,7 @@
 
   <!-- Manual mode -->
   <div id="macroMode_manual" class="hidden">
-    <div class="form-grid" style="grid-template-columns: repeat(3, 1fr);">
+    <div class="form-grid form-grid-3">
       <div class="form-group">
         <label>Proteína</label>
         <div class="input-with-unit">
@@ -494,7 +494,7 @@
   </div>
 
   <div class="mt-2">
-    <table class="clean-table" id="macroTable">
+    <div class="table-wrap"><table class="clean-table" id="macroTable">
       <thead>
         <tr><th>Macro</th><th>Gramos</th><th>kcal</th><th>%</th><th>g/kg</th></tr>
       </thead>
@@ -517,6 +517,7 @@
         </tr>
       </tbody>
     </table>
+    </div>
   </div>
 
   <div class="macro-bar-container">
@@ -714,7 +715,7 @@
         </select>
       </div>
     </div>
-    <div class="mt-2">
+    <div class="mt-2 table-wrap">
       <table class="clean-table">
         <thead><tr><th>Comida</th><th>Prot (g)</th><th>Carbs (g)</th><th>Grasas (g)</th><th>kcal</th></tr></thead>
         <tbody id="tablaComidasBody"></tbody>
