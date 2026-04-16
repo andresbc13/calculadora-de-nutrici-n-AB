@@ -25,6 +25,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/styles.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
 <!-- ═══════════════════════════════════════════════════════
@@ -52,6 +53,8 @@
   <div class="header-actions">
     <button class="btn btn-outline btn-sm no-print" onclick="loadExample()">📋 Datos ejemplo</button>
     <button class="btn btn-ghost btn-sm no-print" onclick="resetAll()">↺ Reset</button>
+    <span id="userEmail" style="font-size:0.72rem;color:var(--text-muted);font-family:var(--font-mono);"></span>
+    <button class="btn btn-ghost btn-sm no-print" onclick="signOut()">🚪 Salir</button>
   </div>
 </header>
 
@@ -857,6 +860,8 @@
 </div>
 </div>
 
+<script src="js/auth.js"></script>
 <script src="js/calculator.js"></script>
+<script>requireAuth();</script>
 </body>
 </html>
