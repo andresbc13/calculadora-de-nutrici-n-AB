@@ -1,0 +1,871 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AB Strength & Conditioning — Calculadora de Nutrición Deportiva</title>
+<!--
+╔══════════════════════════════════════════════════════════════════╗
+║  Andrés Bahena — Strength & Conditioning                        ║
+║  Calculadora Profesional de Nutrición Deportiva                  ║
+║══════════════════════════════════════════════════════════════════║
+║  GUÍA DE USO:                                                     ║
+║  1. Abrir este archivo en cualquier navegador moderno             ║
+║  2. Ingresar datos del atleta en la Sección 1                    ║
+║  3. Revisar las fórmulas calculadas en Sección 2                 ║
+║  4. Ajustar actividad y gasto en Sección 3                       ║
+║  5. Definir objetivo calórico en Sección 4                       ║
+║  6. Configurar macronutrientes en Sección 5                      ║
+║  7. Revisar resultados y resumen en Secciones 6 y 7              ║
+║  8. Usar herramientas extra en Sección 8                         ║
+║  9. Exportar/imprimir en Sección 9                               ║
+║  Sin backend, sin instalación, 100% offline                      ║
+╚══════════════════════════════════════════════════════════════════╝
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/styles.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.1/dist/umd/supabase.min.js"></script>
+</head>
+<body>
+<!-- ═══════════════════════════════════════════════════════
+     PRINT HEADER (only visible when printing)
+     ═══════════════════════════════════════════════════════ -->
+<div class="print-header">
+  <img src="img/logo.jpg" alt="AB Logo">
+  <div>
+    <h2>Andrés Bahena — Strength & Conditioning</h2>
+    <p style="font-size:0.85rem;color:#666;">Calculadora Profesional de Nutrición Deportiva</p>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════
+     HEADER
+     ═══════════════════════════════════════════════════════ -->
+<header class="app-header">
+  <div class="app-logo">
+    <img src="img/logo.jpg" alt="AB Strength & Conditioning">
+    <div class="app-logo-text">
+      <h1>Calculadora de Nutrición</h1>
+      <div class="subtitle">Strength & Conditioning</div>
+    </div>
+  </div>
+  <div class="header-actions">
+    <button class="btn btn-outline btn-sm no-print" onclick="loadExample()">📋 Datos ejemplo</button>
+    <button class="btn btn-ghost btn-sm no-print" onclick="resetAll()">↺ Reset</button>
+    <span id="saveIndicator" style="font-size:0.72rem;color:var(--success);font-family:var(--font-mono);opacity:0;transition:opacity 0.4s;"></span>
+    <span id="userEmail" style="font-size:0.72rem;color:var(--text-muted);font-family:var(--font-mono);"></span>
+    <button class="btn btn-ghost btn-sm no-print" onclick="signOut()">🚪 Salir</button>
+  </div>
+</header>
+
+<div class="container" id="appBody" style="display:none;">
+<div class="app-layout">
+
+<!-- ═══════════════════════════════════════════════════════
+     SIDEBAR NAV
+     ═══════════════════════════════════════════════════════ -->
+<nav class="sidebar-nav no-print">
+  <a href="#sec1"><span class="nav-num">01</span> Datos del Atleta</a>
+  <a href="#sec2"><span class="nav-num">02</span> Fórmulas BMR</a>
+  <a href="#sec3"><span class="nav-num">03</span> Actividad y TDEE</a>
+  <a href="#sec4"><span class="nav-num">04</span> Objetivo Calórico</a>
+  <a href="#sec5"><span class="nav-num">05</span> Macronutrientes</a>
+  <a href="#sec6"><span class="nav-num">06</span> Resultados</a>
+  <a href="#sec7"><span class="nav-num">07</span> Resumen</a>
+  <a href="#sec8"><span class="nav-num">08</span> Herramientas</a>
+  <a href="#sec9"><span class="nav-num">09</span> Exportación</a>
+  <a href="#sec10"><span class="nav-num">10</span> Criterio Técnico</a>
+</nav>
+
+<!-- ═══════════════════════════════════════════════════════
+     MAIN CONTENT
+     ═══════════════════════════════════════════════════════ -->
+<main>
+
+<div id="alerts-container"></div>
+
+<!-- ═══════════ SECCIÓN 1: DATOS DEL ATLETA ═══════════ -->
+<div class="section" id="sec1">
+  <div class="section-header">
+    <div class="section-num">1</div>
+    <div>
+      <div class="section-title">Datos del Atleta</div>
+      <div class="section-subtitle">Información antropométrica y de entrenamiento</div>
+    </div>
+  </div>
+
+  <div class="form-grid">
+    <div class="form-group full-width" style="max-width:300px">
+      <label>Nombre del atleta</label>
+      <input type="text" id="nombre" placeholder="Nombre completo" oninput="recalc()" maxlength="100">
+    </div>
+    <div class="form-group">
+      <label>Fecha</label>
+      <input type="date" id="fecha" oninput="recalc()">
+    </div>
+    <div class="form-group">
+      <label>Sexo</label>
+      <select id="sexo" onchange="recalc()">
+        <option value="M">Masculino</option>
+        <option value="F">Femenino</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Edad</label>
+      <div class="input-with-unit">
+        <input type="number" id="edad" min="10" max="100" step="1" placeholder="25" oninput="recalc()">
+        <span class="unit">años</span>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Peso corporal</label>
+      <div class="input-with-unit">
+        <input type="number" id="peso" min="30" max="250" step="0.1" placeholder="80" oninput="recalc()">
+        <span class="unit">kg</span>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Estatura</label>
+      <div class="input-with-unit">
+        <input type="number" id="estatura" min="100" max="250" step="0.1" placeholder="178" oninput="recalc()">
+        <span class="unit">cm</span>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>% Grasa corporal</label>
+      <div class="input-with-unit">
+        <input type="number" id="grasa" min="2" max="60" step="0.1" placeholder="15" oninput="recalc()">
+        <span class="unit">%</span>
+      </div>
+      <span class="hint">Opcional — activa la ecuación de Cunningham</span>
+    </div>
+    <div class="form-group">
+      <label>Masa libre de grasa (FFM)</label>
+      <div class="input-with-unit">
+        <input type="number" id="ffm" readonly tabindex="-1">
+        <span class="unit">kg</span>
+      </div>
+      <span class="hint">Autocalculada</span>
+    </div>
+  </div>
+
+  <hr class="divider">
+  <div class="form-grid">
+    <div class="form-group">
+      <label>Deporte / Disciplina</label>
+      <input type="text" id="deporte" placeholder="Ej: Fisicoculturismo" oninput="recalc()">
+    </div>
+    <div class="form-group">
+      <label>Nivel competitivo</label>
+      <select id="nivel" onchange="recalc()">
+        <option value="recreativo">Recreativo</option>
+        <option value="amateur">Amateur</option>
+        <option value="intermedio">Intermedio</option>
+        <option value="avanzado">Avanzado</option>
+        <option value="elite">Élite / Profesional</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Días entrenamiento / semana</label>
+      <input type="number" id="diasEntreno" min="0" max="7" step="1" placeholder="5" oninput="recalc()">
+    </div>
+    <div class="form-group">
+      <label>Minutos por sesión</label>
+      <div class="input-with-unit">
+        <input type="number" id="minSesion" min="0" max="300" step="5" placeholder="90" oninput="recalc()">
+        <span class="unit">min</span>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Sesiones por día</label>
+      <input type="number" id="sesiones" min="1" max="4" step="1" placeholder="1" oninput="recalc()">
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ SECCIÓN 2: FÓRMULAS BMR ═══════════ -->
+<div class="section" id="sec2">
+  <div class="section-header">
+    <div class="section-num">2</div>
+    <div>
+      <div class="section-title">Fórmulas y Estimaciones del Metabolismo Basal</div>
+      <div class="section-subtitle">Comparación de ecuaciones científicas para tasa metabólica en reposo</div>
+    </div>
+  </div>
+
+  <div class="formula-cards" id="formulaCards">
+    <div class="formula-card" id="card-hb">
+      <h4>Harris-Benedict</h4>
+      <div class="value" id="val-hb">— <small>kcal/día</small></div>
+      <div class="desc">Ecuación clásica (rev. 1984). Usa peso, estatura, edad y sexo. Puede sobreestimar en alto % de grasa.</div>
+    </div>
+    <div class="formula-card" id="card-msj">
+      <h4>Mifflin-St Jeor</h4>
+      <div class="value" id="val-msj">— <small>kcal/día</small></div>
+      <div class="desc">Más precisa para población general. Usa peso, estatura, edad y sexo.</div>
+    </div>
+    <div class="formula-card" id="card-cun">
+      <h4>Cunningham</h4>
+      <div class="value" id="val-cun">— <small>kcal/día</small></div>
+      <div class="desc">Basada en FFM. Ideal para atletas con composición corporal conocida. Requiere % grasa.</div>
+    </div>
+  </div>
+
+  <div class="mt-2" id="formulaRecommendation" style="padding:0.85rem 1.1rem;border-radius:var(--radius-sm);background:var(--info-bg);border:1px solid rgba(232,206,106,0.15);color:var(--gold-200);font-size:0.82rem;line-height:1.6;">
+    Ingresa los datos del atleta para ver la fórmula recomendada.
+  </div>
+
+  <div class="mt-2">
+    <label style="font-size:0.72rem;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.06em;">Fórmula seleccionada para cálculos</label>
+    <select id="formulaSeleccionada" class="mt-1" onchange="recalc()" style="max-width:300px;">
+      <option value="auto">Automática (recomendada)</option>
+      <option value="hb">Harris-Benedict</option>
+      <option value="msj">Mifflin-St Jeor</option>
+      <option value="cun">Cunningham</option>
+    </select>
+  </div>
+</div>
+
+<!-- ═══════════ SECCIÓN 3: ACTIVIDAD Y GASTO ═══════════ -->
+<div class="section" id="sec3">
+  <div class="section-header">
+    <div class="section-num">3</div>
+    <div>
+      <div class="section-title">Actividad Física y Gasto Energético Total</div>
+      <div class="section-subtitle">Factor de actividad, ajustes adicionales y TDEE</div>
+    </div>
+  </div>
+
+  <div class="form-grid form-grid-2">
+    <div class="form-group">
+      <label>Nivel de actividad</label>
+      <select id="nivelActividad" onchange="updateActivityFactor()">
+        <option value="1.2">Sedentario (1.2)</option>
+        <option value="1.375">Ligero — 1-3 días/sem (1.375)</option>
+        <option value="1.55" selected>Moderado — 3-5 días/sem (1.55)</option>
+        <option value="1.725">Alto — 6-7 días/sem (1.725)</option>
+        <option value="1.9">Muy alto — 2x/día (1.9)</option>
+        <option value="2.1">Doble sesión élite (2.1)</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Multiplicador (editable)</label>
+      <div class="input-with-unit">
+        <input type="number" id="factorActividad" min="1.0" max="3.0" step="0.01" value="1.55" oninput="recalc()">
+        <span class="unit">×</span>
+      </div>
+      <span class="hint">Modifica manualmente si necesitas un valor distinto</span>
+    </div>
+  </div>
+
+  <hr class="divider">
+  <p class="text-sm text-muted mb-1">Ajustes opcionales al gasto (se suman al TDEE)</p>
+  <div class="form-grid">
+    <div class="form-group">
+      <label>Cardio extra</label>
+      <div class="input-with-unit">
+        <input type="number" id="extraCardio" min="0" max="2000" step="10" value="0" oninput="recalc()">
+        <span class="unit">kcal</span>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>NEAT extra</label>
+      <div class="input-with-unit">
+        <input type="number" id="extraNeat" min="0" max="1000" step="10" value="0" oninput="recalc()">
+        <span class="unit">kcal</span>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Pasos diarios estimados</label>
+      <div class="input-with-unit">
+        <input type="number" id="pasos" min="0" max="40000" step="500" placeholder="8000" oninput="recalc()">
+        <span class="unit">pasos</span>
+      </div>
+      <span class="hint">Referencia: ~0.04 kcal/paso</span>
+    </div>
+    <div class="form-group">
+      <label>Calorías entrenamiento</label>
+      <div class="input-with-unit">
+        <input type="number" id="extraEntreno" min="0" max="2000" step="10" value="0" oninput="recalc()">
+        <span class="unit">kcal</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="mt-2">
+    <div class="result-highlight">
+      <div class="label">Gasto Energético Total Diario (TDEE)</div>
+      <div class="big-value" id="tdeeValue">— <small>kcal/día</small></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ SECCIÓN 4: OBJETIVO CALÓRICO ═══════════ -->
+<div class="section" id="sec4">
+  <div class="section-header">
+    <div class="section-num">4</div>
+    <div>
+      <div class="section-title">Objetivo Calórico</div>
+      <div class="section-subtitle">Mantenimiento, volumen o definición con ajuste personalizado</div>
+    </div>
+  </div>
+
+  <div class="flex flex-wrap gap-1 mb-2">
+    <button class="preset-btn active" onclick="setObjetivo('mantenimiento', this)">⚖️ Mantenimiento</button>
+    <button class="preset-btn" onclick="setObjetivo('volumen', this)">📈 Volumen</button>
+    <button class="preset-btn" onclick="setObjetivo('definicion', this)">📉 Definición</button>
+  </div>
+
+  <div class="form-grid form-grid-2">
+    <div class="form-group">
+      <label>Método de ajuste</label>
+      <select id="metodoAjuste" onchange="recalc()">
+        <option value="kcal">Calorías fijas (kcal)</option>
+        <option value="pct">Porcentaje (%)</option>
+      </select>
+    </div>
+    <div class="form-group" id="ajusteKcalGroup">
+      <label>Ajuste calórico</label>
+      <div class="input-with-unit">
+        <input type="number" id="ajusteKcal" value="0" step="25" oninput="recalc()">
+        <span class="unit" id="ajusteUnit">kcal</span>
+      </div>
+      <span class="hint" id="ajusteHint">0 = mantenimiento. Positivo = volumen. Negativo = definición.</span>
+    </div>
+  </div>
+
+  <div class="mt-2">
+    <div class="result-highlight">
+      <div class="label">Calorías Objetivo</div>
+      <div class="big-value" id="calObjetivo">— <small>kcal/día</small></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ SECCIÓN 5: MACRONUTRIENTES ═══════════ -->
+<div class="section" id="sec5">
+  <div class="section-header">
+    <div class="section-num">5</div>
+    <div>
+      <div class="section-title">Distribución de Macronutrientes</div>
+      <div class="section-subtitle">Proteína, carbohidratos y grasas — múltiples métodos configurables</div>
+    </div>
+  </div>
+
+  <p class="text-sm text-muted mb-1">Presets rápidos</p>
+  <div class="flex flex-wrap gap-1 mb-2">
+    <button class="preset-btn" onclick="applyMacroPreset('volumen_limpio', this)">Volumen limpio</button>
+    <button class="preset-btn" onclick="applyMacroPreset('volumen_agresivo', this)">Volumen agresivo</button>
+    <button class="preset-btn" onclick="applyMacroPreset('definicion_conservadora', this)">Def. conservadora</button>
+    <button class="preset-btn" onclick="applyMacroPreset('definicion_agresiva', this)">Def. agresiva</button>
+    <button class="preset-btn" onclick="applyMacroPreset('recomp', this)">Recomp</button>
+    <button class="preset-btn" onclick="applyMacroPreset('mantenimiento', this)">Mant. atlético</button>
+    <button class="preset-btn" onclick="applyMacroPreset('peak_week', this)">Peak week</button>
+    <button class="preset-btn" onclick="applyMacroPreset('resistencia', this)">Resistencia</button>
+    <button class="preset-btn" onclick="applyMacroPreset('rendimiento', this)">Rendimiento</button>
+    <button class="preset-btn" onclick="applyMacroPreset('perdida_grasa', this)">Pérdida grasa</button>
+  </div>
+
+  <div class="tabs no-print">
+    <button class="tab active" onclick="setMacroMethod('gkg', this)">g/kg peso</button>
+    <button class="tab" onclick="setMacroMethod('gkg_ffm', this)">g/kg masa magra</button>
+    <button class="tab" onclick="setMacroMethod('pct', this)">% calórico</button>
+    <button class="tab" onclick="setMacroMethod('manual', this)">Manual</button>
+  </div>
+
+  <!-- g/kg mode -->
+  <div id="macroMode_gkg">
+    <div class="form-grid form-grid-3">
+      <div class="form-group">
+        <div class="flex items-center justify-between">
+          <label>Proteína</label>
+          <button class="lock-btn" id="lockProt" onclick="toggleLock('prot')" title="Bloquear proteína">🔓</button>
+        </div>
+        <div class="input-with-unit">
+          <input type="number" id="protGkg" min="0" max="5" step="0.1" value="2.0" oninput="recalcMacros()">
+          <span class="unit">g/kg</span>
+        </div>
+        <span class="hint">Rango: 1.6–2.7 g/kg</span>
+      </div>
+      <div class="form-group">
+        <div class="flex items-center justify-between">
+          <label>Grasas</label>
+          <button class="lock-btn" id="lockFat" onclick="toggleLock('fat')" title="Bloquear grasas">🔓</button>
+        </div>
+        <div class="input-with-unit">
+          <input type="number" id="fatGkg" min="0" max="3" step="0.1" value="0.9" oninput="recalcMacros()">
+          <span class="unit">g/kg</span>
+        </div>
+        <span class="hint">Rango: 0.6–1.2 g/kg</span>
+      </div>
+      <div class="form-group">
+        <label>Carbohidratos</label>
+        <div class="input-with-unit">
+          <input type="number" id="carbGkg" readonly tabindex="-1">
+          <span class="unit">g/kg</span>
+        </div>
+        <span class="hint">Calorías restantes</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- g/kg FFM mode -->
+  <div id="macroMode_gkg_ffm" class="hidden">
+    <div class="form-grid form-grid-3">
+      <div class="form-group">
+        <label>Proteína (FFM)</label>
+        <div class="input-with-unit">
+          <input type="number" id="protGkgFfm" min="0" max="6" step="0.1" value="2.8" oninput="recalcMacros()">
+          <span class="unit">g/kg</span>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Grasas (FFM)</label>
+        <div class="input-with-unit">
+          <input type="number" id="fatGkgFfm" min="0" max="4" step="0.1" value="1.2" oninput="recalcMacros()">
+          <span class="unit">g/kg</span>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Carbohidratos</label>
+        <div class="input-with-unit">
+          <input type="number" id="carbGkgFfm" readonly tabindex="-1">
+          <span class="unit">g/kg</span>
+        </div>
+        <span class="hint">Calorías restantes</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- % mode -->
+  <div id="macroMode_pct" class="hidden">
+    <div class="form-grid form-grid-3">
+      <div class="form-group">
+        <label>Proteína</label>
+        <div class="input-with-unit">
+          <input type="number" id="protPct" min="0" max="100" step="1" value="30" oninput="recalcMacros()">
+          <span class="unit">%</span>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Grasas</label>
+        <div class="input-with-unit">
+          <input type="number" id="fatPct" min="0" max="100" step="1" value="25" oninput="recalcMacros()">
+          <span class="unit">%</span>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Carbohidratos</label>
+        <div class="input-with-unit">
+          <input type="number" id="carbPct" readonly tabindex="-1">
+          <span class="unit">%</span>
+        </div>
+        <span class="hint">Auto (100% − prot − grasa)</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Manual mode -->
+  <div id="macroMode_manual" class="hidden">
+    <div class="form-grid form-grid-3">
+      <div class="form-group">
+        <label>Proteína</label>
+        <div class="input-with-unit">
+          <input type="number" id="protManual" min="0" max="600" step="1" value="160" oninput="recalcMacros()">
+          <span class="unit">g</span>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Grasas</label>
+        <div class="input-with-unit">
+          <input type="number" id="fatManual" min="0" max="400" step="1" value="72" oninput="recalcMacros()">
+          <span class="unit">g</span>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Carbohidratos</label>
+        <div class="input-with-unit">
+          <input type="number" id="carbManual" min="0" max="1000" step="1" value="300" oninput="recalcMacros()">
+          <span class="unit">g</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="mt-2">
+    <div class="table-wrap"><table class="clean-table" id="macroTable">
+      <thead>
+        <tr><th>Macro</th><th>Gramos</th><th>kcal</th><th>%</th><th>g/kg</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><span class="dot dot-protein" style="display:inline-block;margin-right:0.4rem;"></span>Proteína</td>
+          <td class="mono" id="mPG">—</td><td class="mono" id="mPK">—</td><td class="mono" id="mPP">—</td><td class="mono" id="mPGkg">—</td>
+        </tr>
+        <tr>
+          <td><span class="dot dot-carbs" style="display:inline-block;margin-right:0.4rem;"></span>Carbohidratos</td>
+          <td class="mono" id="mCG">—</td><td class="mono" id="mCK">—</td><td class="mono" id="mCP">—</td><td class="mono" id="mCGkg">—</td>
+        </tr>
+        <tr>
+          <td><span class="dot dot-fat" style="display:inline-block;margin-right:0.4rem;"></span>Grasas</td>
+          <td class="mono" id="mFG">—</td><td class="mono" id="mFK">—</td><td class="mono" id="mFP">—</td><td class="mono" id="mFGkg">—</td>
+        </tr>
+        <tr style="font-weight:700;border-top:2px solid var(--border);">
+          <td>TOTAL</td>
+          <td class="mono" id="mTG">—</td><td class="mono" id="mTK">—</td><td class="mono" id="mTP">—</td><td></td>
+        </tr>
+      </tbody>
+    </table>
+    </div>
+  </div>
+
+  <div class="macro-bar-container">
+    <div class="macro-bar" id="macroBarVisual">
+      <div class="bar-protein" style="width:33%">P</div>
+      <div class="bar-carbs" style="width:34%">C</div>
+      <div class="bar-fat" style="width:33%">G</div>
+    </div>
+    <div class="macro-legend">
+      <span><span class="dot dot-protein"></span> Proteína</span>
+      <span><span class="dot dot-carbs"></span> Carbohidratos</span>
+      <span><span class="dot dot-fat"></span> Grasas</span>
+    </div>
+  </div>
+  <div id="macroAlerts"></div>
+</div>
+
+<!-- ═══════════ SECCIÓN 6: RESULTADOS ═══════════ -->
+<div class="section" id="sec6">
+  <div class="section-header">
+    <div class="section-num">6</div>
+    <div>
+      <div class="section-title">Resultados Finales</div>
+      <div class="section-subtitle">Resumen completo listo para consulta</div>
+    </div>
+  </div>
+
+  <div class="results-row">
+    <div class="result-box">
+      <div class="r-label">BMR</div>
+      <div class="r-value" id="resBmr">—</div>
+      <div class="r-sub">kcal/día</div>
+    </div>
+    <div class="result-box">
+      <div class="r-label">TDEE</div>
+      <div class="r-value" id="resTdee">—</div>
+      <div class="r-sub">kcal/día</div>
+    </div>
+    <div class="result-box">
+      <div class="r-label">Objetivo</div>
+      <div class="r-value" id="resObj">—</div>
+      <div class="r-sub">kcal/día</div>
+    </div>
+    <div class="result-box">
+      <div class="r-label">IMC</div>
+      <div class="r-value" id="resImc">—</div>
+      <div class="r-sub" id="resImcCat">—</div>
+    </div>
+  </div>
+
+  <div class="results-row mt-2">
+    <div class="result-box">
+      <div class="r-label">Proteína</div>
+      <div class="r-value" id="resP">—</div>
+      <div class="r-sub" id="resPsub">—</div>
+    </div>
+    <div class="result-box">
+      <div class="r-label">Carbohidratos</div>
+      <div class="r-value" id="resC">—</div>
+      <div class="r-sub" id="resCsub">—</div>
+    </div>
+    <div class="result-box">
+      <div class="r-label">Grasas</div>
+      <div class="r-value" id="resF">—</div>
+      <div class="r-sub" id="resFsub">—</div>
+    </div>
+    <div class="result-box">
+      <div class="r-label">FFM</div>
+      <div class="r-value" id="resFfm">—</div>
+      <div class="r-sub">kg</div>
+    </div>
+  </div>
+
+  <div class="macro-bar-container mt-2">
+    <div class="macro-bar" id="macroBarResult">
+      <div class="bar-protein" style="width:33%">—%</div>
+      <div class="bar-carbs" style="width:34%">—%</div>
+      <div class="bar-fat" style="width:33%">—%</div>
+    </div>
+    <div class="macro-legend">
+      <span><span class="dot dot-protein"></span> Proteína</span>
+      <span><span class="dot dot-carbs"></span> Carbohidratos</span>
+      <span><span class="dot dot-fat"></span> Grasas</span>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ SECCIÓN 7: RESUMEN PROFESIONAL ═══════════ -->
+<div class="section" id="sec7">
+  <div class="section-header">
+    <div class="section-num">7</div>
+    <div>
+      <div class="section-title">Resumen Profesional</div>
+      <div class="section-subtitle">Texto generado para uso en consulta</div>
+    </div>
+  </div>
+  <div class="summary-text" id="professionalSummary">Completa los datos del atleta para generar el resumen profesional.</div>
+  <div class="mt-2 flex gap-1 no-print">
+    <button class="btn btn-outline btn-sm" onclick="copySummary()">📋 Copiar resumen</button>
+  </div>
+</div>
+
+<!-- ═══════════ SECCIÓN 8: HERRAMIENTAS EXTRA ═══════════ -->
+<div class="section" id="sec8">
+  <div class="section-header">
+    <div class="section-num">8</div>
+    <div>
+      <div class="section-title">Herramientas Extra</div>
+      <div class="section-subtitle">Conversiones, distribución por comidas, ciclado y más</div>
+    </div>
+  </div>
+
+  <div class="tabs no-print">
+    <button class="tab active" onclick="showExtraTab('conversiones', this)">Conversiones</button>
+    <button class="tab" onclick="showExtraTab('comidas', this)">Comidas</button>
+    <button class="tab" onclick="showExtraTab('ciclado', this)">Ciclado / Refeeds</button>
+    <button class="tab" onclick="showExtraTab('trainrest', this)">Training / Rest</button>
+    <button class="tab" onclick="showExtraTab('notas', this)">Notas</button>
+  </div>
+
+  <!-- Conversiones -->
+  <div id="extraTab_conversiones">
+    <div class="form-grid">
+      <div class="form-group">
+        <label>kg ↔ lb</label>
+        <div class="flex gap-1 items-center">
+          <div class="input-with-unit" style="flex:1">
+            <input type="number" id="convKg" step="0.1" oninput="document.getElementById('convLb').value=round(this.value*2.20462,1)">
+            <span class="unit">kg</span>
+          </div>
+          <span class="text-gold">⇄</span>
+          <div class="input-with-unit" style="flex:1">
+            <input type="number" id="convLb" step="0.1" oninput="document.getElementById('convKg').value=round(this.value/2.20462,1)">
+            <span class="unit">lb</span>
+          </div>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>cm → ft/in</label>
+        <div class="flex gap-1 items-center">
+          <div class="input-with-unit" style="flex:1">
+            <input type="number" id="convCm" step="0.1" oninput="cmToFtIn()">
+            <span class="unit">cm</span>
+          </div>
+          <span class="text-gold">→</span>
+          <div style="flex:1">
+            <input type="text" id="convFtIn" readonly style="text-align:center">
+          </div>
+        </div>
+      </div>
+    </div>
+    <hr class="divider">
+    <div class="results-row">
+      <div class="result-box">
+        <div class="r-label">IMC</div>
+        <div class="r-value" id="extraImc">—</div>
+        <div class="r-sub" id="extraImcCat">—</div>
+      </div>
+      <div class="result-box">
+        <div class="r-label">Masa grasa</div>
+        <div class="r-value" id="extraFatMass">—</div>
+        <div class="r-sub">kg</div>
+      </div>
+      <div class="result-box">
+        <div class="r-label">Masa libre de grasa</div>
+        <div class="r-value" id="extraFfm">—</div>
+        <div class="r-sub">kg</div>
+      </div>
+      <div class="result-box">
+        <div class="r-label">Peso en lb</div>
+        <div class="r-value" id="extraLb">—</div>
+        <div class="r-sub">lb</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Comidas -->
+  <div id="extraTab_comidas" class="hidden">
+    <div class="form-grid form-grid-2">
+      <div class="form-group">
+        <label>Número de comidas al día</label>
+        <select id="numComidas" onchange="recalcComidas()">
+          <option value="3">3 comidas</option>
+          <option value="4" selected>4 comidas</option>
+          <option value="5">5 comidas</option>
+          <option value="6">6 comidas</option>
+          <option value="7">7 comidas</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Distribución de carbohidratos</label>
+        <select id="carbDistribucion" onchange="recalcComidas()">
+          <option value="uniforme">Uniforme</option>
+          <option value="periEntreno">Más peri-entrenamiento</option>
+        </select>
+      </div>
+    </div>
+    <div class="mt-2 table-wrap">
+      <table class="clean-table">
+        <thead><tr><th>Comida</th><th>Prot (g)</th><th>Carbs (g)</th><th>Grasas (g)</th><th>kcal</th></tr></thead>
+        <tbody id="tablaComidasBody"></tbody>
+      </table>
+    </div>
+    <p class="text-xs text-muted mt-1">Proteína por comida sugerida para síntesis muscular: 0.3–0.5 g/kg por ingesta.</p>
+  </div>
+
+  <!-- Ciclado -->
+  <div id="extraTab_ciclado" class="hidden">
+    <p class="text-sm text-muted mb-2">Configura días de refeed o dieta cíclica básica.</p>
+    <div class="form-grid form-grid-2">
+      <div class="form-group">
+        <label>Tipo de ciclado</label>
+        <select id="tipoCiclado" onchange="recalcCiclado()">
+          <option value="none">Sin ciclado</option>
+          <option value="refeed1">1 Refeed / semana</option>
+          <option value="refeed2">2 Refeed / semana</option>
+          <option value="ciclo">Dieta cíclica (5 low / 2 high)</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Extra carbohidratos en día high</label>
+        <div class="input-with-unit">
+          <input type="number" id="refeedExtraCarbs" min="0" max="300" step="10" value="100" oninput="recalcCiclado()">
+          <span class="unit">g</span>
+        </div>
+      </div>
+    </div>
+    <div class="mt-2" id="cicladoResultado"></div>
+  </div>
+
+  <!-- Training / Rest Day -->
+  <div id="extraTab_trainrest" class="hidden">
+    <p class="text-sm text-muted mb-2">Calorías y macros diferenciados para día de entrenamiento y descanso.</p>
+    <div class="form-grid form-grid-2">
+      <div class="form-group">
+        <label>Diferencia calórica día de descanso</label>
+        <div class="input-with-unit">
+          <input type="number" id="restDayDiff" value="-200" step="25" oninput="recalcTrainRest()">
+          <span class="unit">kcal</span>
+        </div>
+        <span class="hint">Negativo = menos calorías en descanso</span>
+      </div>
+      <div class="form-group">
+        <label>Estrategia de ajuste</label>
+        <select id="restDayStrategy" onchange="recalcTrainRest()">
+          <option value="carbs">Reducir carbohidratos</option>
+          <option value="fat">Reducir grasas</option>
+          <option value="both">Reducir ambos</option>
+        </select>
+      </div>
+    </div>
+    <div class="mt-2" id="trainRestResultado"></div>
+  </div>
+
+  <!-- Notas -->
+  <div id="extraTab_notas" class="hidden">
+    <div class="form-group">
+      <label>Notas del nutriólogo</label>
+      <textarea id="notasNutriologo" rows="6" placeholder="Observaciones, indicaciones especiales, suplementación, horarios, etc." maxlength="2000"></textarea>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ SECCIÓN 9: EXPORTACIÓN ═══════════ -->
+<div class="section no-print" id="sec9">
+  <div class="section-header">
+    <div class="section-num">9</div>
+    <div>
+      <div class="section-title">Exportación</div>
+      <div class="section-subtitle">Imprime, copia o exporta los resultados</div>
+    </div>
+  </div>
+  <div class="flex flex-wrap gap-1">
+    <button class="btn btn-primary" onclick="window.print()">🖨️ Imprimir / PDF</button>
+    <button class="btn btn-outline" onclick="copySummary()">📋 Copiar resumen</button>
+    <button class="btn btn-outline" onclick="exportJSON()">📦 Exportar JSON</button>
+    <button class="btn btn-outline" onclick="exportText()">📄 Exportar texto</button>
+  </div>
+</div>
+
+<!-- ═══════════ SECCIÓN 10: CRITERIO TÉCNICO ═══════════ -->
+<div class="section" id="sec10">
+  <div class="section-header">
+    <div class="section-num">10</div>
+    <div>
+      <div class="section-title">Criterio Técnico Utilizado</div>
+      <div class="section-subtitle">Fórmulas, lógica y limitaciones</div>
+    </div>
+  </div>
+
+  <h4 style="margin-bottom:0.5rem;color:var(--gold-300);">Fórmulas implementadas</h4>
+  <div class="disclaimer mb-2">
+    <strong>Harris-Benedict (Roza & Shizgal 1984):</strong><br>
+    Hombres: BMR = 88.362 + (13.397 × peso) + (4.799 × estatura) − (5.677 × edad)<br>
+    Mujeres: BMR = 447.593 + (9.247 × peso) + (3.098 × estatura) − (4.330 × edad)<br><br>
+    <strong>Mifflin-St Jeor (1990):</strong><br>
+    Hombres: BMR = (10 × peso) + (6.25 × estatura) − (5 × edad) + 5<br>
+    Mujeres: BMR = (10 × peso) + (6.25 × estatura) − (5 × edad) − 161<br><br>
+    <strong>Cunningham (1991):</strong><br>
+    BMR = 500 + (22 × FFM kg) — Donde FFM = peso × (1 − %grasa/100)
+  </div>
+
+  <h4 style="margin-bottom:0.5rem;color:var(--gold-300);">Lógica de selección de fórmula</h4>
+  <div class="disclaimer mb-2">
+    Con % grasa → Cunningham (basada en FFM, más precisa para atletas).<br>
+    Sin % grasa → Mifflin-St Jeor (mejor validación en población general).<br>
+    Harris-Benedict como referencia complementaria.
+  </div>
+
+  <h4 style="margin-bottom:0.5rem;color:var(--gold-300);">Distribución de macros</h4>
+  <div class="disclaimer mb-2">
+    <strong>Proteína:</strong> Se establece primero (1.6–2.7 g/kg). Sobre peso total o FFM.<br>
+    <strong>Grasas:</strong> En segundo lugar (0.6–1.2 g/kg) para funciones hormonales.<br>
+    <strong>Carbohidratos:</strong> Completan calorías restantes: (Cal − Prot×4 − Fat×9) / 4.<br>
+    Equivalencias: Proteína = 4 kcal/g | Carbohidratos = 4 kcal/g | Grasas = 9 kcal/g.
+  </div>
+
+  <h4 style="margin-bottom:0.5rem;color:var(--gold-300);">Volumen, definición y mantenimiento</h4>
+  <div class="disclaimer mb-2">
+    <strong>Mantenimiento:</strong> TDEE ± 0.<br>
+    <strong>Volumen:</strong> TDEE + 100–800 kcal (o 5–20%).<br>
+    <strong>Definición:</strong> TDEE − 100–1000 kcal (o 5–30%).<br>
+    Seguridad: calorías no deben bajar de BMR × 0.8.
+  </div>
+
+  <h4 style="margin-bottom:0.5rem;color:var(--gold-300);">Advertencias y límites</h4>
+  <div class="disclaimer mb-2">
+    • Cal &lt; 1200 (♀) o &lt; 1500 (♂): alerta baja.<br>
+    • % grasa &lt; 5% (♂) o &lt; 12% (♀): riesgo.<br>
+    • Proteína &lt; 1.2 o &gt; 3.5 g/kg: alerta.<br>
+    • Grasas &lt; 0.5 o &gt; 2.0 g/kg: alerta.<br>
+    • Carbs &lt; 50g: nivel cetogénico.<br>
+    • Diferencia macros vs objetivo &gt; 50 kcal: inconsistencia.
+  </div>
+
+  <div class="disclaimer">
+    <strong>⚠️ Nota profesional:</strong> Esta herramienta proporciona estimaciones basadas en ecuaciones predictivas. Los resultados son un punto de partida y <strong>no sustituyen el juicio clínico</strong>. Factores como termogénesis adaptativa, estado hormonal, medicación, hidratación y condiciones médicas pueden modificar el gasto energético real. Todo plan nutricional debe ser individualizado, monitoreado y ajustado por un profesional calificado.
+  </div>
+</div>
+
+</main>
+</div>
+</div>
+
+<script src="js/config.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/data.js"></script>
+<script src="js/calculator.js"></script>
+<script>requireAuth();</script>
+</body>
+</html>
