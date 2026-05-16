@@ -59,7 +59,6 @@
   <div class="header-actions">
     <button class="btn btn-outline btn-sm no-print" onclick="loadExample()">📋 Datos ejemplo</button>
     <button class="btn btn-ghost btn-sm no-print" onclick="resetAll()">↺ Reset</button>
-    <span id="saveIndicator" style="font-size:0.72rem;color:var(--success);font-family:var(--font-mono);opacity:0;transition:opacity 0.4s;"></span>
     <span id="userEmail" style="font-size:0.72rem;color:var(--text-muted);font-family:var(--font-mono);"></span>
     <button class="btn btn-ghost btn-sm no-print" onclick="signOut()">🚪 Salir</button>
   </div>
@@ -904,5 +903,12 @@
 <script src="js/data.js"></script>
 <script src="js/calculator.js"></script>
 <script>requireAuth();</script>
+<!-- Indicador de guardado flotante -->
+<div id="saveIndicator" class="save-indicator">
+    <span class="save-icon"></span>
+    <span class="save-text"></span>
+    <button class="save-close-btn" aria-label="Cerrar">×</button>
+</div>
+
 </body>
 </html>

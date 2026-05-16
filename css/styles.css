@@ -1069,3 +1069,87 @@ textarea { resize: vertical; min-height: 80px; }
 @media (max-width: 480px) {
     .welcome-text { font-size: 0.85rem; }
 }
+
+/* ========================================
+   INDICADOR DE GUARDADO FLOTANTE
+   ======================================== */
+
+.save-indicator {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.6rem 1rem;
+    border-radius: 24px;
+    font-size: 0.88rem;
+    font-weight: 600;
+    z-index: 9999;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(20px);
+    transition: opacity 0.3s ease, transform 0.3s ease, background-color 0.3s ease;
+}
+
+.save-indicator.show {
+    opacity: 1;
+    pointer-events: auto;
+    transform: translateY(0);
+    animation: slideInUp 0.3s ease forwards;
+}
+
+@keyframes slideInUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Estado: guardando */
+.save-indicator.saving {
+    background: var(--gold, #d4af37);
+    color: #111;
+    animation: slideInUp 0.3s ease forwards, savePulse 1s ease-in-out infinite;
+}
+
+@keyframes savePulse {
+    0%, 100% { transform: scale(1); }
+    50%       { transform: scale(1.04); }
+}
+
+/* Estado: éxito */
+.save-indicator.success {
+    background: #10b981;
+    color: #fff;
+}
+
+/* Estado: error */
+.save-indicator.error {
+    background: #ef4444;
+    color: #fff;
+}
+
+.save-close-btn {
+    display: none;
+    background: none;
+    border: none;
+    color: inherit;
+    font-size: 1.2rem;
+    line-height: 1;
+    cursor: pointer;
+    padding: 0 0 0 0.25rem;
+    opacity: 0.8;
+    transition: opacity 0.2s ease;
+}
+
+.save-close-btn:hover {
+    opacity: 1;
+}
+
+@media (max-width: 768px) {
+    .save-indicator {
+        bottom: 80px;
+        right: 16px;
+        font-size: 0.82rem;
+    }
+}

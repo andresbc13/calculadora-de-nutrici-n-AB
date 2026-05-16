@@ -38,6 +38,44 @@ async function cargarDatos() {
 }
 
 // ═══════════════════════════════════════════════════════
+// INDICADOR DE GUARDADO
+// ═══════════════════════════════════════════════════════
+let _autoHideTimeout;
+
+function showSaveIndicator(state) {
+  const indicator = document.getElementById('saveIndicator');
+  if (!indicator) return;
+
+  clearTimeout(_autoHideTimeout);
+
+  const icon = indicator.querySelector('.save-icon');
+  const text = indicator.querySelector('.save-text');
+  const closeBtn = indicator.querySelector('.save-close-btn');
+
+  indicator.className = 'save-indicator show';
+
+  if (state === 'saving') {
+    indicator.classList.add('saving');
+    icon.textContent = '⏳';
+    text.textContent = 'Guardando...';
+    closeBtn.style.display = 'none';
+  } else if (state === 'success') {
+    indicator.classList.add('success');
+    icon.textContent = '✓';
+    text.textContent = 'Guardado';
+    closeBtn.style.display = 'none';
+    _autoHideTimeout = setTimeout(() => {
+      indicator.classList.remove('show');
+    }, 3000);
+  } else if (state === 'error') {
+    indicator.classList.add('error');
+    icon.textContent = '❌';
+    text.textContent = 'Error al guardar';
+    closeBtn.style.display = 'block';
+  }
+}
+
+// ═══════════════════════════════════════════════════════
 // GUARDAR DATOS (con debounce de 1.5s)
 // ═══════════════════════════════════════════════════════
 let _saveTimeout;
@@ -48,23 +86,25 @@ async function guardarDatos() {
     const { data: { session } } = await sbClient.auth.getSession();
     if (!session) return;
 
-    const datos = {};
-    CAMPOS.forEach(id => {
-      const el = document.getElementById(id);
-      if (el) datos[id] = el.value;
-    });
+    showSaveIndicator('saving');
 
-    await sbClient.from('perfiles').upsert({
-      user_id: session.user.id,
-      datos,
-      updated_at: new Date().toISOString()
-    });
+    try {
+      const datos = {};
+      CAMPOS.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) datos[id] = el.value;
+      });
 
-    const ind = document.getElementById('saveIndicator');
-    if (ind) {
-      ind.textContent = '✓ Guardado';
-      ind.style.opacity = '1';
-      setTimeout(() => { ind.style.opacity = '0'; }, 2000);
+      const { error } = await sbClient.from('perfiles').upsert({
+        user_id: session.user.id,
+        datos,
+        updated_at: new Date().toISOString()
+      });
+
+      if (error) throw error;
+      showSaveIndicator('success');
+    } catch (e) {
+      showSaveIndicator('error');
     }
   }, 1500);
 }
@@ -76,4 +116,8 @@ document.addEventListener('DOMContentLoaded', () => {
   cargarDatos();
   document.addEventListener('input', guardarDatos);
   document.addEventListener('change', guardarDatos);
+
+  document.querySelector('.save-close-btn')?.addEventListener('click', () => {
+    document.getElementById('saveIndicator').classList.remove('show');
+  });
 });
