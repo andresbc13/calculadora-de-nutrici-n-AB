@@ -1016,3 +1016,56 @@ textarea { resize: vertical; min-height: 80px; }
         overflow: hidden;
     }
 }
+
+/* ========================================
+   MENSAJE DE BIENVENIDA
+   ======================================== */
+
+.welcome-message {
+    display: none;
+    margin-bottom: 1.5rem;
+    animation: welcomeFadeIn 0.5s ease forwards;
+}
+
+@keyframes welcomeFadeIn {
+    from { opacity: 0; transform: translateY(-8px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+.welcome-content {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    background: rgba(212, 175, 55, 0.1);
+    border-left: 4px solid var(--gold);
+    border-radius: 0 8px 8px 0;
+    padding: 1rem 1.25rem;
+}
+
+.welcome-emoji {
+    font-size: 1.5rem;
+    flex-shrink: 0;
+}
+
+.welcome-text {
+    margin: 0;
+    color: var(--text-primary);
+    font-size: 0.95rem;
+    flex: 1;
+}
+
+.welcome-arrow {
+    color: var(--gold);
+    font-size: 1.2rem;
+    flex-shrink: 0;
+    animation: welcomeBounce 1s ease-in-out infinite;
+}
+
+@keyframes welcomeBounce {
+    0%, 100% { transform: translateY(0); }
+    50%       { transform: translateY(5px); }
+}
+
+@media (max-width: 480px) {
+    .welcome-text { font-size: 0.85rem; }
+}

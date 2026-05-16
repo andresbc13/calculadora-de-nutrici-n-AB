@@ -309,6 +309,20 @@ function resetAll(){
 document.addEventListener('DOMContentLoaded',()=>{
   setVal('fecha',new Date().toISOString().split('T')[0]);
   recalc();
+
+  // Mensaje de bienvenida
+  const nombreInput = document.getElementById('nombre');
+  const welcomeMessage = document.getElementById('welcome-message');
+  function checkWelcomeMessage() {
+    if (nombreInput.value.trim() === '') {
+      welcomeMessage.style.display = 'block';
+    } else {
+      welcomeMessage.style.display = 'none';
+    }
+  }
+  checkWelcomeMessage();
+  nombreInput.addEventListener('input', checkWelcomeMessage);
+
   const sections=document.querySelectorAll('.section[id]'), navLinks=document.querySelectorAll('.sidebar-nav a');
   const obs=new IntersectionObserver((entries)=>{entries.forEach(e=>{if(e.isIntersecting){navLinks.forEach(l=>l.classList.remove('active'));const link=document.querySelector(`.sidebar-nav a[href="#${e.target.id}"]`);if(link)link.classList.add('active');}});},{rootMargin:'-20% 0px -70% 0px'});
   sections.forEach(s=>obs.observe(s));
