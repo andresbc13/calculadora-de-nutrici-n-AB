@@ -22,6 +22,33 @@ function clamp(v, min, max) { return Math.max(min, Math.min(max, v)); }
 function $(id) { return document.getElementById(id); }
 
 // ═══════════════════════════════════════════════════════
+// COUNTUP ANIMATION
+// ═══════════════════════════════════════════════════════
+const _anims = {};
+function easeOutCubic(t) { return 1 - Math.pow(1 - t, 3); }
+function animateNumber(el, start, end, duration, decimals, suffix) {
+  const key = el.id || (el._k = el._k || Math.random().toString(36).slice(2));
+  if (_anims[key]) cancelAnimationFrame(_anims[key]);
+  const t0 = performance.now(), d = end - start;
+  function step(t) {
+    const p = Math.min((t - t0) / duration, 1);
+    el.textContent = (start + d * easeOutCubic(p)).toFixed(decimals) + suffix;
+    if (p < 1) _anims[key] = requestAnimationFrame(step);
+    else { el.textContent = end.toFixed(decimals) + suffix; delete _anims[key]; }
+  }
+  _anims[key] = requestAnimationFrame(step);
+}
+function setAnim(id, value, decimals = 0, suffix = '') {
+  const el = document.getElementById(id);
+  if (!el) return;
+  if (value === '—' || value === null) { el.textContent = '—'; return; }
+  const num = +value;
+  if (isNaN(num)) { el.textContent = value; return; }
+  const prev = parseFloat(el.textContent) || 0;
+  animateNumber(el, prev, num, 400, decimals, suffix);
+}
+
+// ═══════════════════════════════════════════════════════
 // BMR FORMULAS
 // ═══════════════════════════════════════════════════════
 function calcHB(p, h, a, s) { return s==='M' ? 88.362+(13.397*p)+(4.799*h)-(5.677*a) : 447.593+(9.247*p)+(3.098*h)-(4.330*a); }
@@ -42,9 +69,9 @@ function recalc() {
   if(peso>0&&est>0&&edad>0){ bmrHB=calcHB(peso,est,edad,sexo); bmrMSJ=calcMSJ(peso,est,edad,sexo); state.bmrHB=bmrHB; state.bmrMSJ=bmrMSJ; }
   if(ffm>0){ bmrCUN=calcCUN(ffm); state.bmrCUN=bmrCUN; }
 
-  setText('val-hb', bmrHB>0?round(bmrHB):'—');
-  setText('val-msj', bmrMSJ>0?round(bmrMSJ):'—');
-  setText('val-cun', bmrCUN>0?round(bmrCUN):'—');
+  setAnim('val-hb', bmrHB>0?round(bmrHB):'—');
+  setAnim('val-msj', bmrMSJ>0?round(bmrMSJ):'—');
+  setAnim('val-cun', bmrCUN>0?round(bmrCUN):'—');
 
   let rec='msj', recText='';
   document.querySelectorAll('.formula-card').forEach(c=>{c.classList.remove('recommended');const b=c.querySelector('.badge');if(b)b.remove();});
@@ -68,7 +95,7 @@ function recalc() {
 
   const tdee=bmrUsed*factor+val('extraCardio')+val('extraNeat')+(val('pasos')*0.04)+val('extraEntreno');
   state.tdee=tdee;
-  setText('tdeeValue', tdee>0?round(tdee):'—');
+  setAnim('tdeeValue', tdee>0?round(tdee):'—');
 
   calcCalObj();
   recalcMacros();
@@ -97,7 +124,7 @@ function calcCalObj() {
   else { c=tdee+aj; $('ajusteUnit').textContent='kcal'; $('ajusteHint').textContent=`Ajuste: ${aj>0?'+':''}${aj} kcal sobre TDEE`; }
   if(c<0) c=0;
   state.calObj=c;
-  setText('calObjetivo', c>0?round(c):'—');
+  setAnim('calObjetivo', c>0?round(c):'—');
 }
 
 function updateActivityFactor() { setVal('factorActividad',$('nivelActividad').value); recalc(); }
@@ -157,10 +184,10 @@ function updateMacroDisplay() {
   const pK=protG*4,cK=carbG*4,fK=fatG*9,total=pK+cK+fK;
   const pP=total>0?pK/total*100:0,cP=total>0?cK/total*100:0,fP=total>0?fK/total*100:0;
 
-  setText('mPG',round(protG)+'g'); setText('mPK',round(pK)); setText('mPP',round(pP,1)+'%'); setText('mPGkg',peso>0?round(protG/peso,2)+' g/kg':'—');
-  setText('mCG',round(carbG)+'g'); setText('mCK',round(cK)); setText('mCP',round(cP,1)+'%'); setText('mCGkg',peso>0?round(carbG/peso,2)+' g/kg':'—');
-  setText('mFG',round(fatG)+'g'); setText('mFK',round(fK)); setText('mFP',round(fP,1)+'%'); setText('mFGkg',peso>0?round(fatG/peso,2)+' g/kg':'—');
-  setText('mTG',round(protG+carbG+fatG)+'g'); setText('mTK',round(total)); setText('mTP',round(pP+cP+fP,1)+'%');
+  setAnim('mPG',round(protG),0,'g'); setAnim('mPK',round(pK)); setAnim('mPP',round(pP,1),1,'%'); setAnim('mPGkg',peso>0?round(protG/peso,2):'—',2,' g/kg');
+  setAnim('mCG',round(carbG),0,'g'); setAnim('mCK',round(cK)); setAnim('mCP',round(cP,1),1,'%'); setAnim('mCGkg',peso>0?round(carbG/peso,2):'—',2,' g/kg');
+  setAnim('mFG',round(fatG),0,'g'); setAnim('mFK',round(fK)); setAnim('mFP',round(fP,1),1,'%'); setAnim('mFGkg',peso>0?round(fatG/peso,2):'—',2,' g/kg');
+  setAnim('mTG',round(protG+carbG+fatG),0,'g'); setAnim('mTK',round(total)); setAnim('mTP',round(pP+cP+fP,1),1,'%');
 
   $('macroBarVisual').innerHTML=`<div class="bar-protein" style="width:${pP}%">${round(pP)}%</div><div class="bar-carbs" style="width:${cP}%">${round(cP)}%</div><div class="bar-fat" style="width:${fP}%">${round(fP)}%</div>`;
 
@@ -179,14 +206,14 @@ function updateMacroDisplay() {
 // ═══════════════════════════════════════════════════════
 function updateResults() {
   const{protG,carbG,fatG}=state.macros, peso=val('peso'), est=val('estatura');
-  setText('resBmr',state.bmrSelected>0?round(state.bmrSelected):'—');
-  setText('resTdee',state.tdee>0?round(state.tdee):'—');
-  setText('resObj',state.calObj>0?round(state.calObj):'—');
-  if(peso>0&&est>0){const i=calcIMC(peso,est);setText('resImc',round(i,1));setText('resImcCat',imcCat(i));}
-  setText('resP',round(protG)+'g'); $('resPsub').textContent=peso>0?round(protG/peso,1)+' g/kg':'';
-  setText('resC',round(carbG)+'g'); $('resCsub').textContent=peso>0?round(carbG/peso,1)+' g/kg':'';
-  setText('resF',round(fatG)+'g'); $('resFsub').textContent=peso>0?round(fatG/peso,1)+' g/kg':'';
-  setText('resFfm',val('ffm')>0?round(val('ffm'),1):'—');
+  setAnim('resBmr',state.bmrSelected>0?round(state.bmrSelected):'—');
+  setAnim('resTdee',state.tdee>0?round(state.tdee):'—');
+  setAnim('resObj',state.calObj>0?round(state.calObj):'—');
+  if(peso>0&&est>0){const i=calcIMC(peso,est);setAnim('resImc',round(i,1),1);setText('resImcCat',imcCat(i));}
+  setAnim('resP',round(protG),0,'g'); $('resPsub').textContent=peso>0?round(protG/peso,1)+' g/kg':'';
+  setAnim('resC',round(carbG),0,'g'); $('resCsub').textContent=peso>0?round(carbG/peso,1)+' g/kg':'';
+  setAnim('resF',round(fatG),0,'g'); $('resFsub').textContent=peso>0?round(fatG/peso,1)+' g/kg':'';
+  setAnim('resFfm',val('ffm')>0?round(val('ffm'),1):'—',1);
 
   const pK=protG*4,cK=carbG*4,fK=fatG*9,total=pK+cK+fK;
   const pP=total>0?pK/total*100:33,cP=total>0?cK/total*100:34,fP=total>0?fK/total*100:33;
@@ -222,9 +249,9 @@ function updateSummary() {
 // ═══════════════════════════════════════════════════════
 function updateExtras() {
   const p=val('peso'),e=val('estatura'),g=val('grasa');
-  if(p>0&&e>0){const i=calcIMC(p,e);setText('extraImc',round(i,1));setText('extraImcCat',imcCat(i));}
-  if(g>0&&p>0){setText('extraFatMass',round(p*g/100,1));setText('extraFfm',round(p*(1-g/100),1));}
-  setText('extraLb',p>0?round(p*2.20462,1):'—');
+  if(p>0&&e>0){const i=calcIMC(p,e);setAnim('extraImc',round(i,1),1);setText('extraImcCat',imcCat(i));}
+  if(g>0&&p>0){setAnim('extraFatMass',round(p*g/100,1),1);setAnim('extraFfm',round(p*(1-g/100),1),1);}
+  setAnim('extraLb',p>0?round(p*2.20462,1):'—',1);
 }
 function cmToFtIn(){const cm=val('convCm'),ti=cm/2.54;setVal('convFtIn',Math.floor(ti/12)+"' "+round(ti%12,1)+'"');}
 
