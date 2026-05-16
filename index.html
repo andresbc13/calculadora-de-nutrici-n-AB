@@ -68,6 +68,9 @@
   <div class="header-actions">
     <button class="btn btn-outline btn-sm no-print" onclick="loadExample()">📋 Datos ejemplo</button>
     <button class="btn btn-ghost btn-sm no-print" onclick="resetAll()">↺ Reset</button>
+    <button class="btn btn-ghost btn-sm no-print" id="save-profile-btn" onclick="openSaveProfileModal()">💾 Guardar</button>
+    <button class="btn btn-ghost btn-sm no-print" id="manage-profiles-btn" onclick="openProfilesManager()" title="Perfiles guardados">📁</button>
+    <button class="btn btn-ghost btn-sm no-print" id="compare-profiles-btn" onclick="openCompareModal()">📊 Comparar</button>
     <span id="userEmail" style="font-size:0.72rem;color:var(--text-muted);font-family:var(--font-mono);"></span>
     <button class="btn btn-ghost btn-sm no-print" onclick="signOut()">🚪 Salir</button>
   </div>
@@ -920,6 +923,102 @@
 <script src="js/data.js"></script>
 <script src="js/calculator.js"></script>
 <script>requireAuth();</script>
+<!-- ===== MODAL: GUARDAR PERFIL ===== -->
+<div id="save-profile-modal" class="ab-modal">
+  <div class="ab-modal-content">
+    <div class="ab-modal-header">
+      <h2>💾 Guardar Perfil</h2>
+      <button class="ab-modal-close" onclick="closeSaveProfileModal()">×</button>
+    </div>
+    <div class="ab-modal-body">
+      <div class="form-group">
+        <label>Nombre del perfil</label>
+        <input type="text" id="profile-name-input" class="ab-modal-input" placeholder="Ej: Carlos — Abril 2026">
+      </div>
+      <div class="form-group" style="margin-top:14px;">
+        <label>Etapa</label>
+        <select id="profile-stage-select" class="ab-modal-input">
+          <option value="">Sin especificar</option>
+          <option value="Volumen">Volumen</option>
+          <option value="Definición">Definición</option>
+          <option value="Mantenimiento">Mantenimiento</option>
+          <option value="Recomposición">Recomposición</option>
+          <option value="Peak Week">Peak Week</option>
+        </select>
+      </div>
+    </div>
+    <div class="ab-modal-footer">
+      <button class="btn btn-ghost btn-sm" onclick="closeSaveProfileModal()">Cancelar</button>
+      <button class="btn-ab-gold" onclick="confirmSaveProfile()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== MODAL: PERFILES GUARDADOS ===== -->
+<div id="profiles-manager-modal" class="ab-modal">
+  <div class="ab-modal-content">
+    <div class="ab-modal-header">
+      <h2>📁 Perfiles Guardados</h2>
+      <button class="ab-modal-close" onclick="closeProfilesManager()">×</button>
+    </div>
+    <div class="ab-modal-body">
+      <div id="profiles-list-container"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== MODAL: SELECTOR DE COMPARACIÓN ===== -->
+<div id="compare-selector-modal" class="ab-modal">
+  <div class="ab-modal-content ab-modal-wide">
+    <div class="ab-modal-header">
+      <h2>📊 Comparar Perfiles</h2>
+      <button class="ab-modal-close" onclick="closeCompareModal()">×</button>
+    </div>
+    <div class="ab-modal-body">
+      <div class="comp-selector-grid">
+        <div>
+          <div class="comp-selector-label">Perfil A</div>
+          <select id="compare-select-a" class="ab-modal-input" onchange="renderProfilePreview(this.value,'comp-preview-a')">
+            <option value="">Seleccionar...</option>
+          </select>
+          <div id="comp-preview-a" class="comp-preview"></div>
+        </div>
+        <div class="comp-vs">VS</div>
+        <div>
+          <div class="comp-selector-label">Perfil B</div>
+          <select id="compare-select-b" class="ab-modal-input" onchange="renderProfilePreview(this.value,'comp-preview-b')">
+            <option value="">Seleccionar...</option>
+          </select>
+          <div id="comp-preview-b" class="comp-preview"></div>
+        </div>
+      </div>
+    </div>
+    <div class="ab-modal-footer">
+      <button class="btn btn-ghost btn-sm" onclick="closeCompareModal()">Cancelar</button>
+      <button class="btn-ab-gold" onclick="startComparison()">Comparar →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== VISTA DE COMPARACIÓN ===== -->
+<div id="comparison-view" class="comparison-view" style="display:none;">
+  <div class="comparison-topbar">
+    <button class="comp-exit-btn" onclick="exitComparisonView()">← Volver</button>
+    <h2 class="comp-topbar-title">Comparación de Perfiles</h2>
+    <div></div>
+  </div>
+  <div class="comparison-grid">
+    <div class="comp-col comp-col-a">
+      <div class="comp-col-header" id="comp-col-a-title"></div>
+      <div id="comp-col-a-body"></div>
+    </div>
+    <div class="comp-col comp-col-b">
+      <div class="comp-col-header" id="comp-col-b-title"></div>
+      <div id="comp-col-b-body"></div>
+    </div>
+  </div>
+</div>
+
 <!-- Botón de instalación PWA -->
 <button id="install-btn" class="install-button" style="display:none;">📱 Instalar App</button>
 

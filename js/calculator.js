@@ -471,3 +471,316 @@ document.addEventListener('DOMContentLoaded', function() {
     if (input.value) validateField(fieldId, input.value);
   });
 });
+
+// ========================================
+// GESTIÓN DE PERFILES — SNAPSHOTS
+// ========================================
+
+const PROFILES_KEY = 'ab-profiles';
+
+function generateUUID() {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+    const r = Math.random() * 16 | 0;
+    return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
+  });
+}
+
+function getAllProfiles() {
+  try { return JSON.parse(localStorage.getItem(PROFILES_KEY) || '[]'); }
+  catch { return []; }
+}
+
+function saveProfileToStorage(profile) {
+  const profiles = getAllProfiles();
+  profiles.push(profile);
+  localStorage.setItem(PROFILES_KEY, JSON.stringify(profiles));
+}
+
+function deleteProfileFromStorage(id) {
+  localStorage.setItem(PROFILES_KEY,
+    JSON.stringify(getAllProfiles().filter(p => p.id !== id)));
+}
+
+function getProfileById(id) {
+  return getAllProfiles().find(p => p.id === id);
+}
+
+function collectSnapshot(name, etapa) {
+  const datos = {};
+  [
+    'nombre','fecha','sexo','edad','peso','estatura','grasa','deporte','nivel',
+    'diasEntreno','minSesion','sesiones','nivelActividad','factorActividad',
+    'extraCardio','extraNeat','extraEntreno','pasos',
+    'metodoAjuste','ajusteKcal',
+    'protGkg','fatGkg','protGkgFfm','fatGkgFfm',
+    'protPct','fatPct','protManual','carbManual','fatManual','numComidas'
+  ].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) datos[id] = el.value;
+  });
+
+  const ffm = val('ffm');
+  const peso = parseFloat(datos.peso) || 0;
+  const est  = parseFloat(datos.estatura) || 0;
+
+  return {
+    id: generateUUID(),
+    nombre: name,
+    etapa: etapa,
+    timestamp: new Date().toISOString(),
+    datos,
+    resultados: {
+      bmr:    state.bmrSelected,
+      tdee:   state.tdee,
+      calObj: state.calObj,
+      protG:  state.macros.protG,
+      carbG:  state.macros.carbG,
+      fatG:   state.macros.fatG,
+      ffm:    ffm,
+      imc:    (peso > 0 && est > 0) ? calcIMC(peso, est) : 0,
+    }
+  };
+}
+
+// --- MODAL: GUARDAR PERFIL ---
+
+function openSaveProfileModal() {
+  $('profile-name-input').value = $('nombre').value || '';
+  $('save-profile-modal').classList.add('show');
+  document.body.classList.add('menu-open');
+  setTimeout(() => $('profile-name-input').focus(), 100);
+}
+
+function closeSaveProfileModal() {
+  $('save-profile-modal').classList.remove('show');
+  document.body.classList.remove('menu-open');
+}
+
+function confirmSaveProfile() {
+  const name = $('profile-name-input').value.trim();
+  if (!name) { $('profile-name-input').focus(); return; }
+  const etapa = $('profile-stage-select').value;
+  saveProfileToStorage(collectSnapshot(name, etapa));
+  closeSaveProfileModal();
+  showSaveIndicator('success');
+}
+
+// --- MODAL: PERFILES GUARDADOS ---
+
+function openProfilesManager() {
+  renderProfilesList();
+  $('profiles-manager-modal').classList.add('show');
+  document.body.classList.add('menu-open');
+}
+
+function closeProfilesManager() {
+  $('profiles-manager-modal').classList.remove('show');
+  document.body.classList.remove('menu-open');
+}
+
+function renderProfilesList() {
+  const profiles = getAllProfiles().slice().reverse();
+  const c = $('profiles-list-container');
+  if (profiles.length === 0) {
+    c.innerHTML = '<p class="profiles-empty">No hay perfiles guardados.<br>Completa el formulario y usa 💾 Guardar.</p>';
+    return;
+  }
+  c.innerHTML = profiles.map(p => `
+    <div class="profile-item">
+      <div>
+        <div class="profile-item-name">${p.nombre}</div>
+        <div class="profile-item-meta">
+          ${p.etapa ? `<span class="profile-tag">${p.etapa}</span>` : ''}
+          <span>${new Date(p.timestamp).toLocaleDateString('es-MX',{day:'2-digit',month:'short',year:'numeric'})}</span>
+          ${p.datos.peso ? `<span>${p.datos.peso} kg</span>` : ''}
+          ${p.resultados.calObj > 0 ? `<span>${Math.round(p.resultados.calObj)} kcal</span>` : ''}
+        </div>
+      </div>
+      <div class="profile-item-actions">
+        <button class="btn btn-ghost btn-sm" onclick="loadSnapshotIntoForm('${p.id}')">Cargar</button>
+        <button class="btn btn-ghost btn-sm btn-danger-ghost" onclick="confirmDeleteProfile('${p.id}','${p.nombre.replace(/'/g,"\\'")}')">✕</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function loadSnapshotIntoForm(id) {
+  const p = getProfileById(id);
+  if (!p) return;
+  Object.entries(p.datos).forEach(([key, val]) => {
+    const el = document.getElementById(key);
+    if (el && !el.hasAttribute('readonly')) el.value = val;
+  });
+  recalc();
+  closeProfilesManager();
+}
+
+function confirmDeleteProfile(id, name) {
+  if (!confirm(`¿Eliminar "${name}"?`)) return;
+  deleteProfileFromStorage(id);
+  renderProfilesList();
+}
+
+// --- MODAL: COMPARACIÓN ---
+
+function openCompareModal() {
+  const profiles = getAllProfiles();
+  if (profiles.length < 2) {
+    alert('Necesitas al menos 2 perfiles guardados.\n\nUsa 💾 Guardar para guardar el perfil actual.');
+    return;
+  }
+  populateCompareSelectors(profiles);
+  $('compare-selector-modal').classList.add('show');
+  document.body.classList.add('menu-open');
+}
+
+function closeCompareModal() {
+  $('compare-selector-modal').classList.remove('show');
+  document.body.classList.remove('menu-open');
+}
+
+function populateCompareSelectors(profiles) {
+  ['compare-select-a','compare-select-b'].forEach(id => {
+    const sel = $(id);
+    sel.innerHTML = '<option value="">Seleccionar...</option>';
+    profiles.forEach(p => {
+      const o = document.createElement('option');
+      o.value = p.id;
+      o.textContent = `${p.nombre}${p.etapa ? ' — ' + p.etapa : ''} (${new Date(p.timestamp).toLocaleDateString('es-MX')})`;
+      sel.appendChild(o);
+    });
+  });
+  ['comp-preview-a','comp-preview-b'].forEach(id => {
+    $(id).innerHTML = '';
+    $(id).classList.remove('show');
+  });
+}
+
+function renderProfilePreview(profileId, containerId) {
+  const el = $(containerId);
+  if (!profileId) { el.innerHTML = ''; el.classList.remove('show'); return; }
+  const p = getProfileById(profileId);
+  if (!p) return;
+  el.innerHTML = [
+    ['Atleta',       p.nombre],
+    p.etapa ? ['Etapa', p.etapa] : null,
+    p.datos.peso    ? ['Peso',          p.datos.peso + ' kg']                      : null,
+    p.resultados.bmr    > 0 ? ['BMR',    Math.round(p.resultados.bmr) + ' kcal']   : null,
+    p.resultados.calObj > 0 ? ['Cal. objetivo', Math.round(p.resultados.calObj) + ' kcal'] : null,
+    p.resultados.protG  > 0 ? ['Proteínas', p.resultados.protG + ' g']             : null,
+  ].filter(Boolean).map(([l,v]) =>
+    `<div class="preview-row"><span>${l}</span><strong>${v}</strong></div>`
+  ).join('');
+  el.classList.add('show');
+}
+
+function startComparison() {
+  const idA = $('compare-select-a').value;
+  const idB = $('compare-select-b').value;
+  if (!idA || !idB)      { alert('Selecciona ambos perfiles.'); return; }
+  if (idA === idB)       { alert('Selecciona dos perfiles diferentes.'); return; }
+  closeCompareModal();
+  renderComparisonView(getProfileById(idA), getProfileById(idB));
+}
+
+// --- VISTA DE COMPARACIÓN ---
+
+function diffBadge(a, b) {
+  const na = parseFloat(a), nb = parseFloat(b);
+  if (isNaN(na) || isNaN(nb) || nb === 0) return '';
+  const pct = ((na - nb) / nb) * 100;
+  if (Math.abs(pct) < 1.5) return '';
+  const sign = pct > 0 ? '+' : '';
+  return ` <span class="diff-badge ${pct > 0 ? 'diff-up' : 'diff-down'}">${sign}${pct.toFixed(1)}%</span>`;
+}
+
+function buildSections(pA, pB) {
+  const dA = pA.datos, rA = pA.resultados;
+  const dB = pB.datos, rB = pB.resultados;
+  const fmt = (v, d = 0) => v > 0 ? round(v, d).toString() : '—';
+  const gkg = (g, p) => g > 0 && p > 0 ? round(g / p, 2).toString() : '—';
+
+  return [
+    { title: 'Datos del Atleta', rows: [
+      { l:'Nombre',    a: dA.nombre||'—',                      b: dB.nombre||'—' },
+      { l:'Sexo',      a: dA.sexo==='M'?'Masculino':'Femenino',b: dB.sexo==='M'?'Masculino':'Femenino' },
+      { l:'Edad',      a: dA.edad||'—',   u:'años', b: dB.edad||'—',    n:true },
+      { l:'Peso',      a: dA.peso||'—',   u:'kg',   b: dB.peso||'—',    n:true },
+      { l:'Estatura',  a: dA.estatura||'—', u:'cm', b: dB.estatura||'—',n:true },
+      { l:'% Grasa',   a: dA.grasa||'—',  u:'%',    b: dB.grasa||'—',   n:true },
+      { l:'FFM',       a: fmt(rA.ffm,1),  u:'kg',   b: fmt(rB.ffm,1),   n:true },
+      { l:'IMC',       a: fmt(rA.imc,1),            b: fmt(rB.imc,1),   n:true },
+    ]},
+    { title: 'Metabolismo Basal', rows: [
+      { l:'BMR',           a: fmt(rA.bmr),   u:'kcal', b: fmt(rB.bmr),   n:true },
+      { l:'Factor actividad', a: dA.factorActividad||'—', b: dB.factorActividad||'—', n:true },
+      { l:'TDEE',          a: fmt(rA.tdee),  u:'kcal', b: fmt(rB.tdee),  n:true },
+    ]},
+    { title: 'Objetivo Calórico', rows: [
+      { l:'Método',    a: dA.metodoAjuste||'—',   b: dB.metodoAjuste||'—' },
+      { l:'Ajuste',    a: dA.ajusteKcal||'0', u:'kcal', b: dB.ajusteKcal||'0', n:true },
+      { l:'Cal. objetivo', a: fmt(rA.calObj), u:'kcal', b: fmt(rB.calObj), n:true },
+    ]},
+    { title: 'Macronutrientes', rows: [
+      { l:'Proteínas',     a: fmt(rA.protG,1), u:'g',    b: fmt(rB.protG,1), n:true },
+      { l:'Prot. / kg',    a: gkg(rA.protG,parseFloat(dA.peso)), u:'g/kg', b: gkg(rB.protG,parseFloat(dB.peso)), n:true },
+      { l:'Carbohidratos', a: fmt(rA.carbG,1), u:'g',    b: fmt(rB.carbG,1), n:true },
+      { l:'Grasas',        a: fmt(rA.fatG,1),  u:'g',    b: fmt(rB.fatG,1),  n:true },
+      { l:'Grasas / kg',   a: gkg(rA.fatG,parseFloat(dA.peso)), u:'g/kg', b: gkg(rB.fatG,parseFloat(dB.peso)), n:true },
+      { l:'Total macros',  a: fmt(rA.protG*4+rA.carbG*4+rA.fatG*9), u:'kcal', b: fmt(rB.protG*4+rB.carbG*4+rB.fatG*9), n:true },
+    ]},
+    { title: 'Entrenamiento', rows: [
+      { l:'Deporte',      a: dA.deporte||'—',      b: dB.deporte||'—' },
+      { l:'Nivel',        a: dA.nivel||'—',        b: dB.nivel||'—' },
+      { l:'Días/semana',  a: dA.diasEntreno||'—',  b: dB.diasEntreno||'—', n:true },
+      { l:'Min/sesión',   a: dA.minSesion||'—', u:'min', b: dB.minSesion||'—', n:true },
+    ]},
+  ];
+}
+
+function renderComparisonView(pA, pB) {
+  let htmlA = '', htmlB = '';
+  buildSections(pA, pB).forEach(sec => {
+    const rows = sec.rows.map(r => {
+      const vA = r.a + (r.u ? ' ' + r.u : '');
+      const vB = r.b + (r.u ? ' ' + r.u : '');
+      return { label: r.l, vA, vB, dA: r.n ? diffBadge(r.a, r.b) : '', dB: r.n ? diffBadge(r.b, r.a) : '' };
+    });
+    const block = (vals) =>
+      `<div class="comp-section"><div class="comp-section-title">${sec.title}</div>` +
+      vals.map(r =>
+        `<div class="comp-row"><span class="comp-row-label">${r.label}</span>` +
+        `<span class="comp-row-value">${r.v}${r.d}</span></div>`
+      ).join('') + '</div>';
+
+    htmlA += block(rows.map(r => ({ label: r.label, v: r.vA, d: r.dA })));
+    htmlB += block(rows.map(r => ({ label: r.label, v: r.vB, d: r.dB })));
+  });
+
+  $('comp-col-a-title').textContent = `${pA.nombre}${pA.etapa ? ' — ' + pA.etapa : ''}`;
+  $('comp-col-b-title').textContent = `${pB.nombre}${pB.etapa ? ' — ' + pB.etapa : ''}`;
+  $('comp-col-a-body').innerHTML = htmlA;
+  $('comp-col-b-body').innerHTML = htmlB;
+
+  const view = $('comparison-view');
+  view.style.display = 'block';
+  document.body.style.overflow = 'hidden';
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function exitComparisonView() {
+  $('comparison-view').style.display = 'none';
+  document.body.style.overflow = '';
+}
+
+// Keyboard shortcut: ESC closes modals / comparison view
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Escape') return;
+  ['save-profile-modal','profiles-manager-modal','compare-selector-modal'].forEach(id => {
+    if ($(id)?.classList.contains('show')) {
+      $(id).classList.remove('show');
+      document.body.classList.remove('menu-open');
+    }
+  });
+  if ($('comparison-view')?.style.display === 'block') exitComparisonView();
+});
