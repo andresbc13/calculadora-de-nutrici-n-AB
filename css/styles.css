@@ -1191,3 +1191,38 @@ input.validation-error {
     from { opacity: 0; transform: translateY(-4px); }
     to   { opacity: 1; transform: translateY(0); }
 }
+
+/* ========================================
+   BOTÓN DE INSTALACIÓN PWA
+   ======================================== */
+
+.install-button {
+    position: fixed;
+    bottom: 20px;
+    left: 20px;
+    background: linear-gradient(135deg, var(--gold, #d4af37) 0%, #b8941f 100%);
+    color: #111;
+    border: none;
+    padding: 12px 20px;
+    border-radius: 24px;
+    font-weight: 600;
+    font-size: 0.88rem;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(212, 175, 55, 0.4);
+    z-index: 9998;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.install-button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(212, 175, 55, 0.6);
+}
+
+@media (max-width: 768px) {
+    .install-button {
+        bottom: 80px;
+        left: 16px;
+        font-size: 0.82rem;
+        padding: 10px 16px;
+    }
+}
