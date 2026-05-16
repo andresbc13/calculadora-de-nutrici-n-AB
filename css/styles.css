@@ -1153,3 +1153,41 @@ textarea { resize: vertical; min-height: 80px; }
         font-size: 0.82rem;
     }
 }
+
+/* ========================================
+   VALIDACIÓN EN TIEMPO REAL
+   ======================================== */
+
+input.validation-error {
+    border: 2px solid #ef4444 !important;
+    background-color: rgba(239, 68, 68, 0.05);
+    animation: shake 0.3s ease;
+}
+
+.validation-message {
+    display: none;
+    font-size: 0.75rem;
+    color: #ef4444;
+    margin-top: 4px;
+    padding-left: 2px;
+}
+
+.validation-message.show {
+    display: block;
+    animation: validFadeIn 0.2s ease;
+}
+
+.validation-message::before {
+    content: '⚠ ';
+}
+
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25%       { transform: translateX(-5px); }
+    75%       { transform: translateX(5px); }
+}
+
+@keyframes validFadeIn {
+    from { opacity: 0; transform: translateY(-4px); }
+    to   { opacity: 1; transform: translateY(0); }
+}

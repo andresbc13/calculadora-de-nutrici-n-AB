@@ -151,30 +151,34 @@
     <div class="form-group">
       <label>Edad</label>
       <div class="input-with-unit">
-        <input type="number" id="edad" min="10" max="100" step="1" placeholder="25" oninput="recalc()">
+        <input type="number" id="edad" min="10" max="100" step="1" placeholder="25" oninput="recalc()" aria-describedby="edad-validation" aria-invalid="false">
         <span class="unit">años</span>
       </div>
+      <span class="validation-message" id="edad-validation" role="alert" aria-live="polite"></span>
     </div>
     <div class="form-group">
       <label>Peso corporal</label>
       <div class="input-with-unit">
-        <input type="number" id="peso" min="30" max="250" step="0.1" placeholder="80" oninput="recalc()">
+        <input type="number" id="peso" min="30" max="250" step="0.1" placeholder="80" oninput="recalc()" aria-describedby="peso-validation" aria-invalid="false">
         <span class="unit">kg</span>
       </div>
+      <span class="validation-message" id="peso-validation" role="alert" aria-live="polite"></span>
     </div>
     <div class="form-group">
       <label>Estatura</label>
       <div class="input-with-unit">
-        <input type="number" id="estatura" min="100" max="250" step="0.1" placeholder="178" oninput="recalc()">
+        <input type="number" id="estatura" min="100" max="250" step="0.1" placeholder="178" oninput="recalc()" aria-describedby="estatura-validation" aria-invalid="false">
         <span class="unit">cm</span>
       </div>
+      <span class="validation-message" id="estatura-validation" role="alert" aria-live="polite"></span>
     </div>
     <div class="form-group">
       <label>% Grasa corporal</label>
       <div class="input-with-unit">
-        <input type="number" id="grasa" min="2" max="60" step="0.1" placeholder="15" oninput="recalc()">
+        <input type="number" id="grasa" min="2" max="60" step="0.1" placeholder="15" oninput="recalc()" aria-describedby="grasa-validation" aria-invalid="false">
         <span class="unit">%</span>
       </div>
+      <span class="validation-message" id="grasa-validation" role="alert" aria-live="polite"></span>
       <span class="hint">Opcional — activa la ecuación de Cunningham</span>
     </div>
     <div class="form-group">
@@ -420,9 +424,10 @@
           <button class="lock-btn" id="lockProt" onclick="toggleLock('prot')" title="Bloquear proteína">🔓</button>
         </div>
         <div class="input-with-unit">
-          <input type="number" id="protGkg" min="0" max="5" step="0.1" value="2.0" oninput="recalcMacros()">
+          <input type="number" id="protGkg" min="0" max="5" step="0.1" value="2.0" oninput="recalcMacros()" aria-describedby="protGkg-validation" aria-invalid="false">
           <span class="unit">g/kg</span>
         </div>
+        <span class="validation-message" id="protGkg-validation" role="alert" aria-live="polite"></span>
         <span class="hint">Rango: 1.6–2.7 g/kg</span>
       </div>
       <div class="form-group">
@@ -431,9 +436,10 @@
           <button class="lock-btn" id="lockFat" onclick="toggleLock('fat')" title="Bloquear grasas">🔓</button>
         </div>
         <div class="input-with-unit">
-          <input type="number" id="fatGkg" min="0" max="3" step="0.1" value="0.9" oninput="recalcMacros()">
+          <input type="number" id="fatGkg" min="0" max="3" step="0.1" value="0.9" oninput="recalcMacros()" aria-describedby="fatGkg-validation" aria-invalid="false">
           <span class="unit">g/kg</span>
         </div>
+        <span class="validation-message" id="fatGkg-validation" role="alert" aria-live="polite"></span>
         <span class="hint">Rango: 0.6–1.2 g/kg</span>
       </div>
       <div class="form-group">
@@ -481,16 +487,18 @@
       <div class="form-group">
         <label>Proteína</label>
         <div class="input-with-unit">
-          <input type="number" id="protPct" min="0" max="100" step="1" value="30" oninput="recalcMacros()">
+          <input type="number" id="protPct" min="0" max="100" step="1" value="30" oninput="recalcMacros()" aria-describedby="protPct-validation" aria-invalid="false">
           <span class="unit">%</span>
         </div>
+        <span class="validation-message" id="protPct-validation" role="alert" aria-live="polite"></span>
       </div>
       <div class="form-group">
         <label>Grasas</label>
         <div class="input-with-unit">
-          <input type="number" id="fatPct" min="0" max="100" step="1" value="25" oninput="recalcMacros()">
+          <input type="number" id="fatPct" min="0" max="100" step="1" value="25" oninput="recalcMacros()" aria-describedby="fatPct-validation" aria-invalid="false">
           <span class="unit">%</span>
         </div>
+        <span class="validation-message" id="fatPct-validation" role="alert" aria-live="polite"></span>
       </div>
       <div class="form-group">
         <label>Carbohidratos</label>

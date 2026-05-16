@@ -403,3 +403,71 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 });
+
+// ========================================
+// VALIDACIÓN EN TIEMPO REAL
+// ========================================
+
+const validationRules = {
+  edad:     { min: 10,  max: 100, message: 'Edad típica: 10–100 años' },
+  peso:     { min: 30,  max: 300, message: 'Peso típico: 30–300 kg' },
+  estatura: { min: 100, max: 250, message: 'Estatura típica: 100–250 cm' },
+  grasa:    { min: 3,   max: 50,  message: '% grasa típico: 3–50%' },
+  protGkg:  { min: 0.5, max: 4.5, message: 'Proteína típica: 0.5–4.5 g/kg' },
+  fatGkg:   { min: 0.3, max: 2.5, message: 'Grasas típicas: 0.3–2.5 g/kg' },
+  protPct:  { min: 10,  max: 60,  message: 'Proteína típica: 10–60%' },
+  fatPct:   { min: 10,  max: 60,  message: 'Grasas típicas: 10–60%' },
+};
+
+function showValidationError(input, msgEl, message) {
+  input.classList.add('validation-error');
+  input.setAttribute('aria-invalid', 'true');
+  msgEl.textContent = message;
+  msgEl.classList.add('show');
+}
+
+function clearValidation(input, msgEl) {
+  input.classList.remove('validation-error');
+  input.setAttribute('aria-invalid', 'false');
+  msgEl.textContent = '';
+  msgEl.classList.remove('show');
+}
+
+function validateField(fieldId, value) {
+  const rule = validationRules[fieldId];
+  if (!rule) return;
+  const input = document.getElementById(fieldId);
+  const msgEl = document.getElementById(fieldId + '-validation');
+  if (!input || !msgEl) return;
+  if (value === '' || value === null || value === undefined) {
+    clearValidation(input, msgEl);
+    return;
+  }
+  const n = parseFloat(value);
+  if (isNaN(n)) { clearValidation(input, msgEl); return; }
+  if (n < rule.min || n > rule.max) {
+    showValidationError(input, msgEl, rule.message);
+  } else {
+    clearValidation(input, msgEl);
+  }
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  const _vt = {};
+  Object.keys(validationRules).forEach(function(fieldId) {
+    const input = document.getElementById(fieldId);
+    if (!input) return;
+
+    input.addEventListener('input', function() {
+      clearTimeout(_vt[fieldId]);
+      _vt[fieldId] = setTimeout(() => validateField(fieldId, this.value), 300);
+    });
+
+    input.addEventListener('blur', function() {
+      clearTimeout(_vt[fieldId]);
+      validateField(fieldId, this.value);
+    });
+
+    if (input.value) validateField(fieldId, input.value);
+  });
+});
