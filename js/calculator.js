@@ -384,6 +384,16 @@ document.addEventListener('DOMContentLoaded', function() {
     closeBtn.addEventListener('click', closeMenu);
     overlay.addEventListener('click', closeMenu);
 
+    // Botones de acciones rápidas dentro del menú móvil
+    document.getElementById('mobile-save-profile-btn')?.addEventListener('click', function() {
+        closeMenu();
+        setTimeout(openSaveProfileModal, 300);
+    });
+    document.getElementById('mobile-compare-btn')?.addEventListener('click', function() {
+        closeMenu();
+        setTimeout(openCompareModal, 300);
+    });
+
     menuLinks.forEach(link => {
         link.addEventListener('click', function() {
             closeMenu();

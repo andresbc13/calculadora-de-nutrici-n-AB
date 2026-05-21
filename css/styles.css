@@ -1012,9 +1012,53 @@ textarea { resize: vertical; min-height: 80px; }
         display: flex;
     }
 
+    /* Ocultar botones del header en móvil — van dentro del menú hamburguesa */
+    .header-actions {
+        display: none !important;
+    }
+
     body.menu-open {
         overflow: hidden;
     }
+}
+
+/* Acciones rápidas dentro del menú móvil */
+.mobile-menu-actions {
+    padding: 16px 20px;
+    border-bottom: 1px solid rgba(212, 175, 55, 0.2);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.mobile-action-btn {
+    width: 100%;
+    padding: 13px 20px;
+    border: none;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-align: center;
+}
+
+.mobile-action-primary {
+    background: linear-gradient(135deg, var(--gold) 0%, #b8941f 100%);
+    color: #111;
+}
+
+.mobile-action-primary:active {
+    filter: brightness(0.9);
+}
+
+.mobile-action-secondary {
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    color: #fff;
+}
+
+.mobile-action-secondary:active {
+    filter: brightness(0.9);
 }
 
 /* ========================================
