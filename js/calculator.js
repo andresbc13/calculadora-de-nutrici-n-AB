@@ -486,34 +486,12 @@ document.addEventListener('DOMContentLoaded', function() {
 // GESTIÓN DE PERFILES — SNAPSHOTS
 // ========================================
 
-const PROFILES_KEY = 'ab-profiles';
+// ========================================
+// GESTIÓN DE PERFILES — SUPABASE
+// ========================================
 
-function generateUUID() {
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
-    const r = Math.random() * 16 | 0;
-    return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
-  });
-}
-
-function getAllProfiles() {
-  try { return JSON.parse(localStorage.getItem(PROFILES_KEY) || '[]'); }
-  catch { return []; }
-}
-
-function saveProfileToStorage(profile) {
-  const profiles = getAllProfiles();
-  profiles.push(profile);
-  localStorage.setItem(PROFILES_KEY, JSON.stringify(profiles));
-}
-
-function deleteProfileFromStorage(id) {
-  localStorage.setItem(PROFILES_KEY,
-    JSON.stringify(getAllProfiles().filter(p => p.id !== id)));
-}
-
-function getProfileById(id) {
-  return getAllProfiles().find(p => p.id === id);
-}
+// Cache de perfiles para lookups síncronos (se llena al cargar la lista)
+const _profilesCache = {};
 
 function collectSnapshot(name, etapa) {
   const datos = {};
@@ -524,19 +502,15 @@ function collectSnapshot(name, etapa) {
     'metodoAjuste','ajusteKcal',
     'protGkg','fatGkg','protGkgFfm','fatGkgFfm',
     'protPct','fatPct','protManual','carbManual','fatManual','numComidas'
-  ].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) datos[id] = el.value;
-  });
+  ].forEach(id => { const el = document.getElementById(id); if (el) datos[id] = el.value; });
 
-  const ffm = val('ffm');
+  const ffm  = val('ffm');
   const peso = parseFloat(datos.peso) || 0;
   const est  = parseFloat(datos.estatura) || 0;
 
   return {
-    id: generateUUID(),
     nombre: name,
-    etapa: etapa,
+    etapa:  etapa || null,
     timestamp: new Date().toISOString(),
     datos,
     resultados: {
@@ -546,10 +520,68 @@ function collectSnapshot(name, etapa) {
       protG:  state.macros.protG,
       carbG:  state.macros.carbG,
       fatG:   state.macros.fatG,
-      ffm:    ffm,
-      imc:    (peso > 0 && est > 0) ? calcIMC(peso, est) : 0,
+      ffm,
+      imc: (peso > 0 && est > 0) ? calcIMC(peso, est) : 0,
     }
   };
+}
+
+async function _uid() {
+  const { data: { session } } = await sbClient.auth.getSession();
+  return session?.user?.id || null;
+}
+
+async function getAllProfiles() {
+  const uid = await _uid();
+  if (!uid) return [];
+  const { data, error } = await sbClient
+    .from('perfiles_guardados')
+    .select('*')
+    .eq('user_id', uid)
+    .order('timestamp', { ascending: false });
+  if (error) { console.error('getAllProfiles:', error); return []; }
+  (data || []).forEach(p => { _profilesCache[p.id] = p; });
+  return data || [];
+}
+
+async function saveProfileToStorage(snapshot) {
+  const uid = await _uid();
+  if (!uid) throw new Error('No autenticado');
+  const { data, error } = await sbClient
+    .from('perfiles_guardados')
+    .insert([{ user_id: uid, ...snapshot }])
+    .select()
+    .single();
+  if (error) throw error;
+  _profilesCache[data.id] = data;
+  return data;
+}
+
+async function deleteProfileFromStorage(id) {
+  const uid = await _uid();
+  if (!uid) return;
+  const { error } = await sbClient
+    .from('perfiles_guardados')
+    .delete()
+    .eq('id', id)
+    .eq('user_id', uid);
+  if (error) throw error;
+  delete _profilesCache[id];
+}
+
+async function getProfileById(id) {
+  if (_profilesCache[id]) return _profilesCache[id];
+  const uid = await _uid();
+  if (!uid) return null;
+  const { data, error } = await sbClient
+    .from('perfiles_guardados')
+    .select('*')
+    .eq('id', id)
+    .eq('user_id', uid)
+    .single();
+  if (error) return null;
+  _profilesCache[id] = data;
+  return data;
 }
 
 // --- MODAL: GUARDAR PERFIL ---
@@ -566,21 +598,27 @@ function closeSaveProfileModal() {
   document.body.classList.remove('menu-open');
 }
 
-function confirmSaveProfile() {
+async function confirmSaveProfile() {
   const name = $('profile-name-input').value.trim();
   if (!name) { $('profile-name-input').focus(); return; }
   const etapa = $('profile-stage-select').value;
-  saveProfileToStorage(collectSnapshot(name, etapa));
-  closeSaveProfileModal();
-  showSaveIndicator('success');
+  showSaveIndicator('saving');
+  try {
+    await saveProfileToStorage(collectSnapshot(name, etapa));
+    closeSaveProfileModal();
+    showSaveIndicator('success');
+  } catch (e) {
+    console.error('confirmSaveProfile:', e);
+    showSaveIndicator('error');
+  }
 }
 
 // --- MODAL: PERFILES GUARDADOS ---
 
-function openProfilesManager() {
-  renderProfilesList();
+async function openProfilesManager() {
   $('profiles-manager-modal').classList.add('show');
   document.body.classList.add('menu-open');
+  await renderProfilesList();
 }
 
 function closeProfilesManager() {
@@ -588,9 +626,17 @@ function closeProfilesManager() {
   document.body.classList.remove('menu-open');
 }
 
-function renderProfilesList() {
-  const profiles = getAllProfiles().slice().reverse();
+async function renderProfilesList() {
   const c = $('profiles-list-container');
+  c.innerHTML = '<p class="profiles-empty">⏳ Cargando perfiles...</p>';
+  const profiles = await getAllProfiles();
+
+  // Mostrar botón de migración si quedan datos locales
+  const localKey = 'ab-profiles';
+  const hasLocal = !!localStorage.getItem(localKey);
+  const migBtn = $('migrate-profiles-btn');
+  if (migBtn) migBtn.style.display = hasLocal ? 'block' : 'none';
+
   if (profiles.length === 0) {
     c.innerHTML = '<p class="profiles-empty">No hay perfiles guardados.<br>Completa el formulario y usa 💾 Guardar.</p>';
     return;
@@ -602,8 +648,8 @@ function renderProfilesList() {
         <div class="profile-item-meta">
           ${p.etapa ? `<span class="profile-tag">${p.etapa}</span>` : ''}
           <span>${new Date(p.timestamp).toLocaleDateString('es-MX',{day:'2-digit',month:'short',year:'numeric'})}</span>
-          ${p.datos.peso ? `<span>${p.datos.peso} kg</span>` : ''}
-          ${p.resultados.calObj > 0 ? `<span>${Math.round(p.resultados.calObj)} kcal</span>` : ''}
+          ${p.datos?.peso ? `<span>${p.datos.peso} kg</span>` : ''}
+          ${p.resultados?.calObj > 0 ? `<span>${Math.round(p.resultados.calObj)} kcal</span>` : ''}
         </div>
       </div>
       <div class="profile-item-actions">
@@ -614,34 +660,41 @@ function renderProfilesList() {
   `).join('');
 }
 
-function loadSnapshotIntoForm(id) {
-  const p = getProfileById(id);
+async function loadSnapshotIntoForm(id) {
+  const p = await getProfileById(id);
   if (!p) return;
-  Object.entries(p.datos).forEach(([key, val]) => {
+  Object.entries(p.datos).forEach(([key, v]) => {
     const el = document.getElementById(key);
-    if (el && !el.hasAttribute('readonly')) el.value = val;
+    if (el && !el.hasAttribute('readonly')) el.value = v;
   });
   recalc();
   closeProfilesManager();
 }
 
-function confirmDeleteProfile(id, name) {
+async function confirmDeleteProfile(id, name) {
   if (!confirm(`¿Eliminar "${name}"?`)) return;
-  deleteProfileFromStorage(id);
-  renderProfilesList();
+  try {
+    await deleteProfileFromStorage(id);
+    await renderProfilesList();
+  } catch (e) { showSaveIndicator('error'); }
 }
 
 // --- MODAL: COMPARACIÓN ---
 
-function openCompareModal() {
-  const profiles = getAllProfiles();
+async function openCompareModal() {
+  $('compare-selector-modal').classList.add('show');
+  document.body.classList.add('menu-open');
+  ['compare-select-a','compare-select-b'].forEach(id => {
+    $(id).innerHTML = '<option>⏳ Cargando...</option>';
+  });
+  const profiles = await getAllProfiles();
   if (profiles.length < 2) {
+    $('compare-selector-modal').classList.remove('show');
+    document.body.classList.remove('menu-open');
     alert('Necesitas al menos 2 perfiles guardados.\n\nUsa 💾 Guardar para guardar el perfil actual.');
     return;
   }
   populateCompareSelectors(profiles);
-  $('compare-selector-modal').classList.add('show');
-  document.body.classList.add('menu-open');
 }
 
 function closeCompareModal() {
@@ -666,31 +719,63 @@ function populateCompareSelectors(profiles) {
   });
 }
 
-function renderProfilePreview(profileId, containerId) {
+async function renderProfilePreview(profileId, containerId) {
   const el = $(containerId);
   if (!profileId) { el.innerHTML = ''; el.classList.remove('show'); return; }
-  const p = getProfileById(profileId);
+  const p = await getProfileById(profileId);
   if (!p) return;
   el.innerHTML = [
     ['Atleta',       p.nombre],
     p.etapa ? ['Etapa', p.etapa] : null,
-    p.datos.peso    ? ['Peso',          p.datos.peso + ' kg']                      : null,
-    p.resultados.bmr    > 0 ? ['BMR',    Math.round(p.resultados.bmr) + ' kcal']   : null,
-    p.resultados.calObj > 0 ? ['Cal. objetivo', Math.round(p.resultados.calObj) + ' kcal'] : null,
-    p.resultados.protG  > 0 ? ['Proteínas', p.resultados.protG + ' g']             : null,
+    p.datos?.peso       ? ['Peso',          p.datos.peso + ' kg']                           : null,
+    p.resultados?.bmr    > 0 ? ['BMR',    Math.round(p.resultados.bmr) + ' kcal']           : null,
+    p.resultados?.calObj > 0 ? ['Cal. objetivo', Math.round(p.resultados.calObj) + ' kcal'] : null,
+    p.resultados?.protG  > 0 ? ['Proteínas', p.resultados.protG + ' g']                     : null,
   ].filter(Boolean).map(([l,v]) =>
     `<div class="preview-row"><span>${l}</span><strong>${v}</strong></div>`
   ).join('');
   el.classList.add('show');
 }
 
-function startComparison() {
+async function startComparison() {
   const idA = $('compare-select-a').value;
   const idB = $('compare-select-b').value;
-  if (!idA || !idB)      { alert('Selecciona ambos perfiles.'); return; }
-  if (idA === idB)       { alert('Selecciona dos perfiles diferentes.'); return; }
+  if (!idA || !idB)  { alert('Selecciona ambos perfiles.'); return; }
+  if (idA === idB)   { alert('Selecciona dos perfiles diferentes.'); return; }
+  const [pA, pB] = await Promise.all([getProfileById(idA), getProfileById(idB)]);
+  if (!pA || !pB) { showSaveIndicator('error'); return; }
   closeCompareModal();
-  renderComparisonView(getProfileById(idA), getProfileById(idB));
+  renderComparisonView(pA, pB);
+}
+
+// --- MIGRACIÓN DESDE LOCALSTORAGE ---
+
+async function migrateFromLocalStorage() {
+  const raw = localStorage.getItem('ab-profiles');
+  if (!raw) return { migrated: 0, errors: 0 };
+  let profiles;
+  try { profiles = JSON.parse(raw); } catch { return { migrated: 0, errors: 0 }; }
+  if (!Array.isArray(profiles) || profiles.length === 0) return { migrated: 0, errors: 0 };
+
+  let migrated = 0, errors = 0;
+  for (const p of profiles) {
+    try {
+      await saveProfileToStorage({
+        nombre:    p.nombre,
+        etapa:     p.etapa || p.metadata?.etapa || null,
+        timestamp: p.timestamp || new Date().toISOString(),
+        datos:     p.datos     || {},
+        resultados: p.resultados || {},
+      });
+      migrated++;
+    } catch (e) { errors++; }
+  }
+
+  if (migrated > 0 && errors === 0) {
+    localStorage.setItem('ab-profiles-backup', raw);
+    localStorage.removeItem('ab-profiles');
+  }
+  return { migrated, errors };
 }
 
 // --- VISTA DE COMPARACIÓN ---
@@ -794,3 +879,22 @@ document.addEventListener('keydown', e => {
   });
   if ($('comparison-view')?.style.display === 'block') exitComparisonView();
 });
+
+async function runMigration(btn) {
+  if (!confirm('¿Migrar todos los perfiles del navegador a Supabase?\nSe creará un respaldo local antes de borrarlos.')) return;
+  btn.disabled = true;
+  btn.textContent = '⏳ Migrando...';
+  try {
+    const { migrated, errors } = await migrateFromLocalStorage();
+    if (errors === 0) {
+      btn.textContent = `✅ ${migrated} perfil(es) migrados`;
+      await renderProfilesList();
+    } else {
+      btn.textContent = `⚠️ ${migrated} ok, ${errors} errores`;
+      btn.disabled = false;
+    }
+  } catch (e) {
+    btn.textContent = '❌ Error — intenta de nuevo';
+    btn.disabled = false;
+  }
+}

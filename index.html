@@ -967,6 +967,15 @@
     </div>
     <div class="ab-modal-body">
       <div id="profiles-list-container"></div>
+      <div id="migrate-profiles-btn" style="display:none; margin-top:16px;">
+        <hr style="border-color:rgba(212,175,55,0.15); margin-bottom:16px;">
+        <p style="font-size:0.8rem; color:var(--text-muted); margin-bottom:10px;">
+          Se detectaron perfiles guardados localmente (antes de la nube).
+        </p>
+        <button class="btn-ab-gold" style="width:100%;" onclick="runMigration(this)">
+          🔄 Migrar perfiles locales a Supabase
+        </button>
+      </div>
     </div>
   </div>
 </div>
