@@ -1018,7 +1018,7 @@
   <div class="comparison-topbar">
     <button class="comp-exit-btn" onclick="exitComparisonView()">← Volver</button>
     <h2 class="comp-topbar-title">Comparación de Perfiles</h2>
-    <div></div>
+    <button class="btn-analyze-ai" id="analyze-ai-btn" onclick="analyzeWithAI()">✨ Analizar con IA</button>
   </div>
   <div class="comparison-grid">
     <div class="comp-col comp-col-a">
@@ -1030,6 +1030,8 @@
       <div id="comp-col-b-body"></div>
     </div>
   </div>
+  <!-- Tarjeta de análisis IA -->
+  <div id="ai-card" class="ai-card" style="display:none;"></div>
 </div>
 
 <!-- Botón de instalación PWA -->

@@ -834,6 +834,13 @@ function buildSections(pA, pB) {
 }
 
 function renderComparisonView(pA, pB) {
+  // Guardar perfiles para el análisis con IA y resetear tarjeta
+  _compProfilesForAI = { pA, pB };
+  const aiCard = $('ai-card');
+  if (aiCard) { aiCard.style.display = 'none'; aiCard.innerHTML = ''; }
+  const aiBtn = $('analyze-ai-btn');
+  if (aiBtn) { aiBtn.disabled = false; aiBtn.textContent = '✨ Analizar con IA'; }
+
   let htmlA = '', htmlB = '';
   buildSections(pA, pB).forEach(sec => {
     const rows = sec.rows.map(r => {
@@ -864,6 +871,7 @@ function renderComparisonView(pA, pB) {
 }
 
 function exitComparisonView() {
+  _compProfilesForAI = { pA: null, pB: null };
   $('comparison-view').style.display = 'none';
   document.body.style.overflow = '';
 }
@@ -897,4 +905,129 @@ async function runMigration(btn) {
     btn.textContent = '❌ Error — intenta de nuevo';
     btn.disabled = false;
   }
+}
+
+// ========================================
+// ANÁLISIS CON IA
+// ========================================
+
+// Almacena los perfiles activos en el modo comparación
+let _compProfilesForAI = { pA: null, pB: null };
+
+function buildAIPrompt(pA, pB) {
+  const fmt = (v, d = 0) => v > 0 ? round(v, d) : '—';
+  const gkg  = (g, p) => g > 0 && p > 0 ? round(g / p, 2) : '—';
+
+  function profileText(p, label) {
+    const d = p.datos, r = p.resultados;
+    const peso  = parseFloat(d.peso) || 0;
+    const ajust = parseFloat(d.ajusteKcal) || 0;
+    const tipo  = ajust > 0 ? 'superávit' : ajust < 0 ? 'déficit' : 'mantenimiento';
+    return `${label} — ${d.nombre || 'Sin nombre'} (${p.etapa || 'Sin etapa'}):
+- Peso: ${d.peso || '—'} kg | % Grasa: ${d.grasa || '—'}% | FFM: ${fmt(r.ffm, 1)} kg | IMC: ${fmt(r.imc, 1)}
+- Deporte: ${d.deporte || '—'} | Nivel: ${d.nivel || '—'} | Días/semana: ${d.diasEntreno || '—'} | Min/sesión: ${d.minSesion || '—'}
+- BMR: ${fmt(r.bmr)} kcal | Factor actividad: ${d.factorActividad || '—'} | TDEE: ${fmt(r.tdee)} kcal
+- Objetivo calórico: ${fmt(r.calObj)} kcal (${tipo} ${Math.abs(ajust)} kcal)
+- Proteínas: ${fmt(r.protG, 1)} g (${gkg(r.protG, peso)} g/kg) | Carbohidratos: ${fmt(r.carbG, 1)} g | Grasas: ${fmt(r.fatG, 1)} g (${gkg(r.fatG, peso)} g/kg)`;
+  }
+
+  return `Eres un nutricionista deportivo experto. Analiza la comparación entre estos dos perfiles y responde ÚNICAMENTE con JSON válido (sin texto extra, sin markdown), con exactamente esta estructura:
+{"progreso":"...","observaciones":"...","recomendaciones":["...","...","..."]}
+
+${profileText(pA, 'PERFIL A')}
+
+${profileText(pB, 'PERFIL B')}
+
+El campo "progreso": describe qué cambió entre ambos perfiles (composición corporal, metabolismo, macros).
+El campo "observaciones": señala alertas clínicas relevantes (déficit agresivo, proteína baja para el deporte, ratios inusuales, etc.).
+El campo "recomendaciones": exactamente 3 ajustes concretos y accionables para la siguiente etapa.
+Responde en español.`;
+}
+
+async function analyzeWithAI() {
+  const { pA, pB } = _compProfilesForAI;
+  if (!pA || !pB) return;
+
+  const card = $('ai-card');
+  const btn  = $('analyze-ai-btn');
+
+  btn.disabled    = true;
+  btn.textContent = '⏳ Analizando...';
+  card.style.display = 'block';
+  card.innerHTML = `<div class="ai-loading"><div class="ai-spinner"></div><span>Consultando con IA...</span></div>`;
+  card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 12000);
+
+  try {
+    const res = await fetch('/api/analyze', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt: buildAIPrompt(pA, pB) }),
+      signal: controller.signal,
+    });
+    clearTimeout(timeout);
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || `Error ${res.status}`);
+    }
+
+    const { text } = await res.json();
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    const data = jsonMatch ? JSON.parse(jsonMatch[0]) : {};
+    renderAIResult(data);
+
+  } catch (e) {
+    clearTimeout(timeout);
+    const msg = e.name === 'AbortError'
+      ? 'La solicitud tardó más de 10 segundos. Intenta de nuevo.'
+      : (e.message || 'Error desconocido');
+    card.innerHTML = `
+      <div class="ai-error">
+        <span>⚠️</span>
+        <p>${msg}</p>
+        <button class="btn btn-ghost btn-sm" onclick="$('ai-card').style.display='none'">Cerrar</button>
+      </div>`;
+  } finally {
+    btn.disabled    = false;
+    btn.textContent = '✨ Analizar con IA';
+  }
+}
+
+function renderAIResult(data) {
+  const card = $('ai-card');
+  const recs = Array.isArray(data.recomendaciones) ? data.recomendaciones : [];
+
+  if (!data.progreso && !data.observaciones && recs.length === 0) {
+    card.innerHTML = `<div class="ai-error"><span>⚠️</span><p>El análisis no pudo procesarse. Intenta de nuevo.</p></div>`;
+    return;
+  }
+
+  card.innerHTML = `
+    <div class="ai-card-header">
+      <span class="ai-card-icon">✨</span>
+      <span>Análisis con Inteligencia Artificial</span>
+      <span class="ai-card-model">Claude Sonnet</span>
+    </div>
+    <div class="ai-card-body">
+      <div class="ai-section">
+        <div class="ai-section-title">📈 Progreso</div>
+        <p class="ai-section-text">${data.progreso || '—'}</p>
+      </div>
+      <div class="ai-section">
+        <div class="ai-section-title">🔍 Observaciones</div>
+        <p class="ai-section-text">${data.observaciones || '—'}</p>
+      </div>
+      <div class="ai-section">
+        <div class="ai-section-title">🎯 Recomendaciones</div>
+        <ol class="ai-recs-list">
+          ${recs.map(r => `<li>${r}</li>`).join('')}
+        </ol>
+      </div>
+    </div>
+    <div class="ai-card-footer">
+      Generado por IA · No sustituye criterio clínico profesional
+    </div>`;
 }
