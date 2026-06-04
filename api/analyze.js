@@ -1,6 +1,7 @@
-// Vercel serverless function — proxy seguro a Anthropic API
-// La API key vive en la variable de entorno ANTHROPIC_API_KEY de Vercel,
+// Vercel serverless function — proxy seguro a OpenRouter API
+// La API key vive en la variable de entorno OPENROUTER_API_KEY de Vercel,
 // nunca se expone al navegador.
+// Documentación: https://openrouter.ai/docs
 
 module.exports = async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -12,7 +13,7 @@ module.exports = async function handler(req, res) {
     return res.status(405).json({ error: 'Método no permitido' });
   }
 
-  const apiKey = process.env.ANTHROPIC_API_KEY;
+  const apiKey = process.env.OPENROUTER_API_KEY;
   if (!apiKey) {
     return res.status(500).json({ error: 'API key no configurada en el servidor' });
   }
@@ -26,15 +27,16 @@ module.exports = async function handler(req, res) {
   const timeout = setTimeout(() => controller.abort(), 10000);
 
   try {
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
+    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
       headers: {
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01',
-        'content-type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+        'HTTP-Referer': 'https://ab-nutricion.vercel.app',
+        'X-Title': 'AB Nutrición — Calculadora Deportiva',
       },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
+        model: 'anthropic/claude-3.5-sonnet',
         max_tokens: 1024,
         messages: [{ role: 'user', content: prompt }],
       }),
@@ -46,11 +48,12 @@ module.exports = async function handler(req, res) {
 
     if (!response.ok) {
       return res.status(response.status).json({
-        error: data?.error?.message || `Error Anthropic ${response.status}`,
+        error: data?.error?.message || `Error OpenRouter ${response.status}`,
       });
     }
 
-    return res.status(200).json({ text: data.content?.[0]?.text || '' });
+    const text = data.choices?.[0]?.message?.content || '';
+    return res.status(200).json({ text });
 
   } catch (err) {
     clearTimeout(timeout);
