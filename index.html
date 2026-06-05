@@ -980,6 +980,23 @@
   </div>
 </div>
 
+<!-- ===== MODAL: HISTORIAL DE PROGRESO ===== -->
+<div id="progress-view-modal" class="ab-modal progress-modal">
+  <div class="ab-modal-content ab-modal-wide ab-modal-tall">
+    <div class="ab-modal-header">
+      <h2 id="progress-view-title">📈 Progreso</h2>
+      <button class="ab-modal-close" onclick="closeProgressView()">×</button>
+    </div>
+    <div class="ab-modal-body">
+      <div id="progress-chart-wrap" style="display:none;">
+        <canvas id="progress-chart" style="width:100%;display:block;"></canvas>
+      </div>
+      <p id="progress-chart-msg" class="progress-chart-msg" style="display:none;"></p>
+      <div id="progress-snapshots-list"></div>
+    </div>
+  </div>
+</div>
+
 <!-- ===== MODAL: SELECTOR DE COMPARACIÓN ===== -->
 <div id="compare-selector-modal" class="ab-modal">
   <div class="ab-modal-content ab-modal-wide">

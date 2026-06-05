@@ -653,6 +653,7 @@ async function renderProfilesList() {
         </div>
       </div>
       <div class="profile-item-actions">
+        <button class="btn btn-ghost btn-sm btn-progress" onclick="openProgressView('${p.nombre.replace(/'/g,"\\'").replace(/"/g,'&quot;')}')">📈</button>
         <button class="btn btn-ghost btn-sm" onclick="loadSnapshotIntoForm('${p.id}')">Cargar</button>
         <button class="btn btn-ghost btn-sm btn-danger-ghost" onclick="confirmDeleteProfile('${p.id}','${p.nombre.replace(/'/g,"\\'")}')">✕</button>
       </div>
@@ -1030,4 +1031,242 @@ function renderAIResult(data) {
     <div class="ai-card-footer">
       Generado por IA · No sustituye criterio clínico profesional
     </div>`;
+}
+
+// ========================================
+// HISTORIAL DE PROGRESO POR ATLETA
+// ========================================
+
+function _fmtDateShort(ts) {
+  return new Date(ts).toLocaleDateString('es-MX', { day: '2-digit', month: 'short' });
+}
+function _fmtDateLong(ts) {
+  return new Date(ts).toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' });
+}
+
+async function openProgressView(nombreAtleta) {
+  // Cerrar gestor de perfiles (queda debajo)
+  $('profiles-manager-modal').classList.remove('show');
+
+  // Cargar y filtrar
+  const all = await getAllProfiles();
+  const points = all
+    .filter(p => (p.nombre || '').toLowerCase().trim() === nombreAtleta.toLowerCase().trim())
+    .sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+
+  // Título
+  $('progress-view-title').textContent = `📈 ${nombreAtleta}`;
+
+  // Renderizar tabla
+  _renderProgressList(points);
+
+  // Gráfica
+  const wrap = $('progress-chart-wrap');
+  const msg  = $('progress-chart-msg');
+  if (points.length >= 3) {
+    wrap.style.display = 'block';
+    msg.style.display  = 'none';
+    // Esperar un frame para que el DOM tenga dimensiones correctas
+    requestAnimationFrame(() => requestAnimationFrame(() => _drawProgressChart(points)));
+  } else {
+    wrap.style.display = 'none';
+    msg.style.display  = 'block';
+    msg.textContent = points.length === 0
+      ? 'No hay datos registrados para este atleta.'
+      : 'Agrega al menos 3 perfiles de este atleta para ver la gráfica de evolución.';
+  }
+
+  // Mostrar modal
+  $('progress-view-modal').classList.add('show');
+  document.body.classList.add('menu-open');
+}
+
+function closeProgressView() {
+  $('progress-view-modal').classList.remove('show');
+  // Volver al gestor de perfiles
+  $('profiles-manager-modal').classList.add('show');
+}
+
+function _renderProgressList(points) {
+  const c = $('progress-snapshots-list');
+  if (points.length === 0) {
+    c.innerHTML = '<p class="profiles-empty">No hay snapshots guardados.</p>';
+    return;
+  }
+
+  // Mostrar más reciente primero en la tabla
+  const rows = [...points].reverse();
+  const latest = rows[0].id;
+
+  c.innerHTML = `
+    <div class="progress-list-header">
+      <span>Fecha</span>
+      <span>Peso</span>
+      <span>% Grasa</span>
+      <span>Calorías</span>
+      <span>Proteínas</span>
+    </div>
+    ${rows.map(p => {
+      const isLatest = p.id === latest;
+      const calObj  = p.resultados?.calObj > 0 ? Math.round(p.resultados.calObj) + ' kcal' : '—';
+      const protG   = p.resultados?.protG  > 0 ? p.resultados.protG + ' g'                 : '—';
+      return `<div class="progress-list-row${isLatest ? ' progress-row-latest' : ''}">
+        <span class="progress-row-date">${_fmtDateLong(p.timestamp)}${p.etapa ? ' · ' + p.etapa : ''}</span>
+        <span>${p.datos?.peso ? p.datos.peso + ' kg' : '—'}</span>
+        <span>${p.datos?.grasa ? p.datos.grasa + '%' : '—'}</span>
+        <span>${calObj}</span>
+        <span>${protG}</span>
+      </div>`;
+    }).join('')}
+  `;
+}
+
+function _drawProgressChart(points) {
+  const canvas = $('progress-chart');
+  if (!canvas) return;
+
+  const wrap = $('progress-chart-wrap');
+  const W = wrap.clientWidth - 16;   // 8px padding × 2
+  const H = 220;
+  canvas.width  = W;
+  canvas.height = H;
+
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, W, H);
+
+  // Layout
+  const ml = 46, mr = 50, mt = 30, mb = 38;
+  const cW = W - ml - mr;
+  const cH = H - mt - mb;
+  const n  = points.length;
+
+  // Palette
+  const GOLD   = '#d4af37';
+  const GREEN  = '#4ade80';
+  const MUTED  = '#6b6860';
+  const GRID   = 'rgba(255,255,255,0.06)';
+  const BG     = '#111115';
+
+  // Extract data
+  const pesoArr = points.map(p => parseFloat(p.datos?.peso)   || 0);
+  const kcalArr = points.map(p => p.resultados?.calObj        || 0);
+  const labels  = points.map(p => _fmtDateShort(p.timestamp));
+
+  // Scale helpers
+  function minMax(arr) {
+    const v = arr.filter(x => x > 0);
+    if (!v.length) return { min: 0, max: 1 };
+    const lo = Math.min(...v), hi = Math.max(...v);
+    const pad = (hi - lo) * 0.18 || lo * 0.1 || 5;
+    return { min: lo - pad, max: hi + pad };
+  }
+  const PR = minMax(pesoArr);
+  const KR = minMax(kcalArr);
+
+  const toX = i  => ml + (i / (n - 1)) * cW;
+  const toY = (v, r) => {
+    if (r.max === r.min) return mt + cH / 2;
+    return mt + cH * (1 - (v - r.min) / (r.max - r.min));
+  };
+
+  // ── Grid ──────────────────────────────────
+  ctx.strokeStyle = GRID;
+  ctx.lineWidth   = 1;
+  for (let i = 0; i <= 4; i++) {
+    const y = mt + (i / 4) * cH;
+    ctx.beginPath(); ctx.moveTo(ml, y); ctx.lineTo(ml + cW, y); ctx.stroke();
+  }
+  points.forEach((_, i) => {
+    const x = toX(i);
+    ctx.beginPath(); ctx.moveTo(x, mt); ctx.lineTo(x, mt + cH); ctx.stroke();
+  });
+
+  // ── Axes ─────────────────────────────────
+  ctx.strokeStyle = MUTED;
+  ctx.lineWidth   = 1;
+  ctx.beginPath();
+  ctx.moveTo(ml, mt); ctx.lineTo(ml, mt + cH); ctx.lineTo(ml + cW, mt + cH);
+  ctx.stroke();
+
+  // ── Y labels ─────────────────────────────
+  ctx.font      = '10px system-ui, sans-serif';
+  ctx.fillStyle = GOLD;
+  ctx.textAlign = 'right';
+  for (let i = 0; i <= 4; i++) {
+    const v = PR.min + (PR.max - PR.min) * (1 - i / 4);
+    ctx.fillText(Math.round(v), ml - 5, mt + (i / 4) * cH + 3);
+  }
+  ctx.fillStyle = GREEN;
+  ctx.textAlign = 'left';
+  for (let i = 0; i <= 4; i++) {
+    const v = KR.min + (KR.max - KR.min) * (1 - i / 4);
+    ctx.fillText(Math.round(v), ml + cW + 5, mt + (i / 4) * cH + 3);
+  }
+
+  // ── X labels ─────────────────────────────
+  ctx.fillStyle = MUTED;
+  ctx.textAlign = 'center';
+  ctx.font      = '9px system-ui, sans-serif';
+  labels.forEach((lbl, i) => ctx.fillText(lbl, toX(i), mt + cH + 16));
+
+  // ── Draw a series ────────────────────────
+  function drawSeries(data, range, color) {
+    // Area fill
+    ctx.beginPath();
+    data.forEach((v, i) => {
+      const x = toX(i), y = toY(v, range);
+      i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    });
+    ctx.lineTo(toX(n - 1), mt + cH);
+    ctx.lineTo(toX(0), mt + cH);
+    ctx.closePath();
+    ctx.globalAlpha = 0.07;
+    ctx.fillStyle   = color;
+    ctx.fill();
+    ctx.globalAlpha = 1;
+
+    // Line
+    ctx.beginPath();
+    ctx.strokeStyle = color;
+    ctx.lineWidth   = 2;
+    ctx.lineJoin    = 'round';
+    data.forEach((v, i) => {
+      const x = toX(i), y = toY(v, range);
+      i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    });
+    ctx.stroke();
+
+    // Dots
+    data.forEach((v, i) => {
+      const x = toX(i), y = toY(v, range);
+      ctx.beginPath();
+      ctx.arc(x, y, 4, 0, Math.PI * 2);
+      ctx.fillStyle   = color;
+      ctx.fill();
+      ctx.strokeStyle = BG;
+      ctx.lineWidth   = 2;
+      ctx.stroke();
+    });
+  }
+
+  drawSeries(kcalArr, KR, GREEN);
+  drawSeries(pesoArr, PR, GOLD);
+
+  // ── Legend ────────────────────────────────
+  function legendItem(x, color, label) {
+    ctx.beginPath();
+    ctx.strokeStyle = color; ctx.lineWidth = 2;
+    ctx.moveTo(x, mt - 14); ctx.lineTo(x + 18, mt - 14); ctx.stroke();
+    ctx.beginPath();
+    ctx.fillStyle = color;
+    ctx.arc(x + 9, mt - 14, 3, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = color;
+    ctx.font      = '10px system-ui, sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillText(label, x + 24, mt - 10);
+  }
+
+  const legendStartX = ml + cW / 2 - 80;
+  legendItem(legendStartX,       GOLD,  'Peso (kg)');
+  legendItem(legendStartX + 95,  GREEN, 'Calorías');
 }

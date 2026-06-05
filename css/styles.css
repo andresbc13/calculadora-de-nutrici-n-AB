@@ -1635,3 +1635,82 @@ input.validation-error {
   .ai-card { margin: 0 12px 24px; }
   .btn-analyze-ai { padding: 7px 12px; font-size: 0.8rem; }
 }
+
+/* ========================================
+   HISTORIAL DE PROGRESO
+   ======================================== */
+
+.ab-modal-tall { max-height: 92vh; }
+
+/* Botón progreso en lista de perfiles */
+.btn-progress { color: var(--gold, #d4af37) !important; }
+.btn-progress:hover { background: rgba(212,175,55,0.1) !important; }
+
+/* Wrapper del canvas */
+#progress-chart-wrap {
+  background: rgba(255,255,255,0.02);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 10px;
+  padding: 8px;
+  margin-bottom: 20px;
+  overflow: hidden;
+}
+
+/* Mensaje "agrega más puntos" */
+.progress-chart-msg {
+  text-align: center;
+  font-size: 0.85rem;
+  color: var(--text-muted, #6b6860);
+  padding: 18px 0 20px;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  margin-bottom: 16px;
+}
+
+/* Tabla de snapshots */
+.progress-list-header,
+.progress-list-row {
+  display: grid;
+  grid-template-columns: 1.6fr 1fr 1fr 1.4fr 1.2fr;
+  gap: 6px;
+  padding: 8px 4px;
+  font-size: 0.8rem;
+  align-items: center;
+}
+.progress-list-header {
+  color: var(--text-muted, #6b6860);
+  font-weight: 700;
+  text-transform: uppercase;
+  font-size: 0.7rem;
+  letter-spacing: 0.06em;
+  border-bottom: 1px solid rgba(212,175,55,0.2);
+  margin-bottom: 2px;
+}
+.progress-list-row {
+  color: var(--text-secondary, #a8a498);
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+  transition: background 0.15s ease;
+}
+.progress-list-row:hover { background: rgba(255,255,255,0.03); border-radius: 6px; }
+.progress-list-row:last-child { border-bottom: none; }
+.progress-row-latest {
+  color: var(--text-primary, #f0ece0);
+  font-weight: 600;
+}
+.progress-row-latest .progress-row-date::after {
+  content: ' ·actual';
+  font-size: 0.68rem;
+  color: var(--gold, #d4af37);
+  font-weight: 400;
+}
+.progress-row-date { color: var(--text-muted, #6b6860); font-size: 0.78rem; }
+
+@media (max-width: 520px) {
+  .progress-list-header,
+  .progress-list-row {
+    grid-template-columns: 1.4fr 1fr 1fr 1.4fr;
+    font-size: 0.75rem;
+  }
+  /* Ocultar columna Proteínas en móvil muy pequeño */
+  .progress-list-header span:last-child,
+  .progress-list-row span:last-child { display: none; }
+}
