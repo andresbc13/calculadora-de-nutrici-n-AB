@@ -1270,3 +1270,26 @@ function _drawProgressChart(points) {
   legendItem(legendStartX,       GOLD,  'Peso (kg)');
   legendItem(legendStartX + 95,  GREEN, 'Calorías');
 }
+
+// ========================================
+// EXPORTAR COMPARACIÓN A PDF
+// ========================================
+
+function exportComparisonToPDF() {
+  // Actualizar fecha en el encabezado de impresión
+  const dateEl = $('print-comparison-date');
+  if (dateEl) {
+    dateEl.textContent = new Date().toLocaleDateString('es-MX', {
+      day: '2-digit', month: 'long', year: 'numeric'
+    });
+  }
+
+  document.body.classList.add('printing');
+
+  // Limpiar la clase al terminar (onafterprint + fallback)
+  const cleanup = () => document.body.classList.remove('printing');
+  window.addEventListener('afterprint', cleanup, { once: true });
+  setTimeout(cleanup, 3000); // fallback por si afterprint no dispara
+
+  window.print();
+}

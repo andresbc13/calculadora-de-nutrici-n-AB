@@ -1032,10 +1032,20 @@
 
 <!-- ===== VISTA DE COMPARACIÓN ===== -->
 <div id="comparison-view" class="comparison-view" style="display:none;">
+
+  <!-- Encabezado visible solo al imprimir -->
+  <div class="print-comparison-header">
+    <div class="print-header-brand">Andrés Bahena · Strength &amp; Conditioning — Calculadora de Nutrición</div>
+    <div class="print-header-meta">Comparación de Perfiles &nbsp;·&nbsp; <span id="print-comparison-date"></span></div>
+  </div>
+
   <div class="comparison-topbar">
     <button class="comp-exit-btn" onclick="exitComparisonView()">← Volver</button>
     <h2 class="comp-topbar-title">Comparación de Perfiles</h2>
-    <button class="btn-analyze-ai" id="analyze-ai-btn" onclick="analyzeWithAI()">✨ Analizar con IA</button>
+    <div class="comparison-topbar-actions">
+      <button class="btn-export-pdf" onclick="exportComparisonToPDF()">⬇️ Exportar PDF</button>
+      <button class="btn-analyze-ai" id="analyze-ai-btn" onclick="analyzeWithAI()">✨ Analizar con IA</button>
+    </div>
   </div>
   <div class="comparison-grid">
     <div class="comp-col comp-col-a">

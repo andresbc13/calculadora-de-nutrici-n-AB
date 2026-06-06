@@ -1714,3 +1714,111 @@ input.validation-error {
   .progress-list-header span:last-child,
   .progress-list-row span:last-child { display: none; }
 }
+
+/* ========================================
+   BOTÓN EXPORTAR PDF
+   ======================================== */
+
+.comparison-topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.btn-export-pdf {
+  background: rgba(212, 175, 55, 0.12);
+  color: var(--gold, #d4af37);
+  border: 1px solid rgba(212, 175, 55, 0.35);
+  padding: 7px 14px;
+  border-radius: 8px;
+  font-size: 0.84rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.2s ease;
+}
+.btn-export-pdf:hover { background: rgba(212, 175, 55, 0.22); }
+
+/* Encabezado de impresión — oculto en pantalla */
+.print-comparison-header { display: none; }
+
+/* ========================================
+   @MEDIA PRINT — EXPORTAR COMPARACIÓN
+   ======================================== */
+
+@page { size: A4 landscape; margin: 12mm 15mm; }
+
+@media print {
+  /* Preservar colores de fondo */
+  * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+
+  /* 1. Ocultar todo */
+  body.printing * { visibility: hidden; }
+
+  /* 2. Mostrar solo #comparison-view y sus descendientes */
+  body.printing #comparison-view,
+  body.printing #comparison-view * { visibility: visible; }
+
+  /* 3. Posicionar la vista en la esquina 0,0 */
+  body.printing { overflow: visible !important; }
+  body.printing #comparison-view {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%;
+    height: auto;
+    overflow: visible;
+    display: block !important;
+  }
+
+  /* 4. Encabezado de impresión */
+  body.printing .print-comparison-header {
+    display: block;
+    padding-bottom: 10px;
+    margin-bottom: 14px;
+    border-bottom: 2px solid #d4af37;
+  }
+  body.printing .print-header-brand {
+    font-size: 11pt;
+    font-weight: 700;
+    color: #d4af37;
+  }
+  body.printing .print-header-meta {
+    font-size: 9pt;
+    color: #a8a498;
+    margin-top: 2px;
+  }
+
+  /* 5. Ocultar elementos interactivos */
+  body.printing .comparison-topbar { display: none !important; }
+  body.printing .btn-analyze-ai,
+  body.printing .btn-export-pdf,
+  body.printing .comp-exit-btn { display: none !important; }
+
+  /* 6. Grid de comparación: forzar 2 columnas */
+  body.printing .comparison-grid {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 0 !important;
+    background: #333 !important;
+    border: 1px solid #333;
+  }
+  body.printing .comp-col {
+    padding: 14px 18px;
+    background: #111115 !important;
+    border-bottom: none !important;
+  }
+  body.printing .comp-col-a {
+    border-right: 1px solid #333 !important;
+  }
+
+  /* 7. Evitar cortes dentro de secciones */
+  body.printing .comp-section { page-break-inside: avoid; break-inside: avoid; }
+  body.printing .ai-card      { page-break-inside: avoid; break-inside: avoid; margin: 14px 0 0; }
+
+  /* 8. Tarjeta IA — ancho completo bajo el grid */
+  body.printing #ai-card {
+    width: 100%;
+    margin: 14px 0 0;
+    box-sizing: border-box;
+  }
+}
